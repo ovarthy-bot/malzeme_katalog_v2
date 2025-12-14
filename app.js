@@ -78,19 +78,51 @@ function renderMaterials(dataList) {
     });
 }
 
-// --- 2. YENİ MALZEME EKLEME (RESİM SIKIŞTIRMA DAHİL) ---
+// --- DEĞİŞKEN: Seçilen dosyayı hafızada tutmak için ---
+let selectedFile = null; 
+
+// --- 2.1 KAMERA VE GALERİ INPUTLARINI DİNLEME ---
+const cameraInput = document.getElementById('cameraInput');
+const galleryInput = document.getElementById('galleryInput');
+const previewContainer = document.getElementById('previewContainer');
+const imgPreview = document.getElementById('imgPreview');
+
+// Her iki input için ortak dosya yakalama fonksiyonu
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        selectedFile = file; // Dosyayı değişkene ata
+        
+        // Önizleme göster
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imgPreview.src = e.target.result;
+            previewContainer.classList.remove('d-none'); // Önizlemeyi aç
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+// Inputlara olay dinleyicisi ekle
+cameraInput.addEventListener('change', handleFileSelect);
+galleryInput.addEventListener('change', handleFileSelect);
+
+// --- 2.2 YENİ MALZEME EKLEME (GÜNCELLENMİŞ) ---
 addForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    const file = document.getElementById('inpFile').files[0];
-    if (!file) return;
+    // Eğer dosya seçilmediyse uyarı ver
+    if (!selectedFile) {
+        alert("Lütfen bir resim çekin veya galeriden seçin!");
+        return;
+    }
 
     showLoading(true);
 
-    // CompressorJS ile resmi sıkıştır
-    new Compressor(file, {
-        quality: 0.6, // Kaliteyi %60'a düşür
-        maxWidth: 1024, // Genişliği max 1024px yap
+    // CompressorJS ile resmi sıkıştır (Seçilen dosyayı kullan)
+    new Compressor(selectedFile, {
+        quality: 0.6, 
+        maxWidth: 1024,
         success(result) {
             uploadToFirebase(result);
         },
@@ -101,6 +133,12 @@ addForm.addEventListener('submit', (e) => {
         },
     });
 });
+
+// Yükleme tamamlandıktan sonra formu temizlerken önizlemeyi de sıfırlayalım
+// (uploadToFirebase fonksiyonunun içindeki "addForm.reset();" satırının altına şunu ekleyin):
+// 
+// selectedFile = null; // Dosya değişkenini boşalt
+// previewContainer.classList.add('d-none'); // Önizlemeyi gizle
 
 async function uploadToFirebase(compressedFile) {
     try {
