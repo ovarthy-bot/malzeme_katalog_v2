@@ -24,6 +24,12 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 const addForm = document.getElementById('addForm');
 const catalogList = document.getElementById('catalogList');
 
+//Kamera galeri
+const fileCamera = document.getElementById('fileCamera');
+const fileGallery = document.getElementById('fileGallery');
+const inpFile = document.getElementById('inpFile'); // mevcut input
+
+
 // --- 1. VERİLERİ ÇEKME VE LİSTELEME ---
 async function fetchMaterials() {
     showLoading(true);
@@ -145,6 +151,14 @@ document.getElementById('btnFilter').addEventListener('click', applyFilters);
 document.getElementById('searchInput').addEventListener('keyup', applyFilters);
 document.getElementById('filterCategory').addEventListener('change', applyFilters);
 document.getElementById('filterAircraft').addEventListener('change', applyFilters);
+document.getElementById('btnCamera').onclick = () => fileCamera.click();
+document.getElementById('btnGallery').onclick = () => fileGallery.click();
+
+[fileCamera, fileGallery].forEach(input => {
+  input.addEventListener('change', e => {
+    inpFile.files = e.target.files;
+  });
+});
 
 function applyFilters() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
