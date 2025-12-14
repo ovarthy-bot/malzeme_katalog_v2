@@ -50,34 +50,15 @@
                             <label class="form-label">Not (Opsiyonel)</label>
                             <input type="text" class="form-control" id="mNote" placeholder="-">
                         </div>
-                       <div class="col-12">
+                        <div class="col-12">
     <label class="form-label">Malzeme Fotoğrafı</label>
-
-    <input 
-        type="file" 
-        id="inputCamera" 
-        accept="image/*" 
-        capture="environment" 
-        class="d-none"
-    >
-
-    <input 
-        type="file" 
-        id="inputGallery" 
-        accept="image/png, image/jpeg, image/jpg" 
-        class="d-none"
-    >
-
-    <div class="d-flex gap-2">
-        <label for="inputCamera" class="btn btn-outline-danger w-50 py-3 d-flex align-items-center justify-content-center">
-            <span class="h5 m-0">📷 Çek</span>
-        </label>
-
-        <label for="inputGallery" class="btn btn-outline-primary w-50 py-3 d-flex align-items-center justify-content-center">
-            <span class="h5 m-0">🖼️ Seç</span>
-        </label>
-    </div>
-
+    
+    <input type="file" class="form-control d-none" id="mImage" accept="image/*">
+    
+    <label for="mImage" class="btn btn-outline-primary w-100 py-3">
+        <span class="h5">📷 Fotoğraf Çek veya Yükle</span>
+    </label>
+    
     <div id="fileNameDisplay" class="text-center mt-2 text-muted fst-italic">
         Henüz resim seçilmedi.
     </div>
