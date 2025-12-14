@@ -42,8 +42,11 @@ async function uploadImage(file) {
         }
         
         // Dosya ismi (Türkçe karakter sorununu önlemek için encodeURI kullanılabilir veya basit timestamp)
-        const fileName = `${Date.now()}_img`; 
-        const storageRef = ref(storage, `images/${fileName}`);
+// Mobil kamera uyumlu dosya adı üretimi
+const fileExt = file.type.split('/')[1] || 'jpg';
+const fileName = `${Date.now()}.${fileExt}`;
+const storageRef = ref(storage, `images/${fileName}`);
+
 
         console.log("Firebase Storage'a yükleniyor...");
         
