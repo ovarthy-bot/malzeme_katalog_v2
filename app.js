@@ -3,12 +3,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// --- KONFİGÜRASYON ---
+// --- KONFİGÜRASYON (Bunu kendi bilgilerinizle değiştirin) ---
 const firebaseConfig = {
   apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
   authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
   projectId: "pn-katalog-v2-fa1d0",
-  storageBucket: "pn-katalog-v2-fa1d0.appspot.com",
+  storageBucket: "pn-katalog-v2-fa1d0.firebasestorage.app",
   messagingSenderId: "89223612336",
   appId: "1:89223612336:web:fa7fc9e04e1470ea7ab875"
 };
@@ -19,48 +19,33 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // Global Değişkenler
-let materialsData = [];
+let materialsData = []; // Filtreleme için veriyi burada tutacağız
 
 // --- 1. RESİM SIKIŞTIRMA VE YÜKLEME ---
 async function uploadImage(file) {
     // Sıkıştırma ayarları
     const options = {
-        maxSizeMB: 0.1,          // 100KB civarı hedef
-        maxWidthOrHeight: 800,   // Resim boyutunu küçült
+        maxSizeMB: 0.1,          // Hedef: 100KB altı
+        maxWidthOrHeight: 800,   // Maksimum genişlik/yükseklik
         useWebWorker: true
     };
 
     try {
         console.log("Resim sıkıştırılıyor...");
+        const compressedFile = await imageCompression(file, options);
         
-        // Kütüphaneyi güvenli çağırma (window objesi üzerinden)
-        let compressedFile = file;
-        if (window.imageCompression) {
-            compressedFile = await window.imageCompression(file, options);
-        } else {
-            console.warn("Sıkıştırma kütüphanesi yüklenemedi, orijinal dosya yükleniyor.");
-        }
-        
-        // Dosya ismi (Türkçe karakter sorununu önlemek için encodeURI kullanılabilir veya basit timestamp)
-// Mobil kamera uyumlu dosya adı üretimi
-const fileExt = file.type.split('/')[1] || 'jpg';
-const fileName = `${Date.now()}.${fileExt}`;
-const storageRef = ref(storage, `images/${fileName}`);
+        // Storage Referansı (images/zaman_dosyaAdi)
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `images/${fileName}`);
 
-
-        console.log("Firebase Storage'a yükleniyor...");
-        
-        // Yükleme işlemi
+        // Yükleme
         const snapshot = await uploadBytes(storageRef, compressedFile);
         const downloadURL = await getDownloadURL(snapshot.ref);
-        
-        console.log("Yükleme başarılı, URL:", downloadURL);
         return downloadURL;
 
     } catch (error) {
-        console.error("Upload Hatası Detayı:", error);
-        // Kullanıcıya hatayı göstermek için throw ediyoruz
-        throw new Error("Resim yüklenirken hata oluştu: " + error.message);
+        console.error("Resim hatası:", error);
+        throw error;
     }
 }
 
@@ -71,46 +56,44 @@ const submitBtn = document.getElementById('submitBtn');
 addForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     submitBtn.disabled = true;
-    submitBtn.innerText = "İşleniyor...";
+    submitBtn.innerText = "Kaydediliyor...";
 
     try {
+        // Form verilerini al
         const name = document.getElementById('mName').value;
         const pn = document.getElementById('mPartNumber').value;
         const category = document.getElementById('mCategory').value;
         const aircraft = document.getElementById('mAircraft').value;
         const note = document.getElementById('mNote').value || "-";
+       // ... form verilerini al kısmı ...
         const imageFile = document.getElementById('mImage').files[0];
-
-        // Varsayılan resim
+        
+        // Varsayılan resim (Eğer resim yüklenmezse bu görünür)
         let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"; 
 
+        // Eğer kullanıcı bir dosya seçtiyse yükleme işlemini yap
         if (imageFile) {
-             submitBtn.innerText = "Resim Yükleniyor...";
              imgUrl = await uploadImage(imageFile);
         }
 
-        submitBtn.innerText = "Veri Kaydediliyor...";
-        
+        // Firestore'a veriyi kaydet
         await addDoc(collection(db, "materials"), {
             name: name,
             partNumber: pn,
             category: category,
             aircraft: aircraft,
             note: note,
-            imageUrl: imgUrl,
+            imageUrl: imgUrl, // Ya yüklenen resim ya da varsayılan resim gider
             createdAt: new Date()
         });
 
         alert("Malzeme başarıyla eklendi!");
         addForm.reset();
-        document.getElementById('fileNameDisplay').innerText = "Henüz resim seçilmedi.";
-        document.getElementById('fileNameDisplay').className = "text-center mt-2 text-muted fst-italic";
-        
-        loadMaterials(); 
+        loadMaterials(); // Listeyi yenile
 
     } catch (error) {
-        console.error("Genel Hata:", error);
-        alert("HATA OLUŞTU:\n" + error.message);
+        console.error("Hata:", error);
+        alert("Bir hata oluştu: " + error.message);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = "Kaydet";
@@ -120,13 +103,13 @@ addForm.addEventListener('submit', async (e) => {
 // --- 3. VERİLERİ ÇEKME VE LİSTELEME ---
 async function loadMaterials() {
     const listContainer = document.getElementById('catalogList');
-    listContainer.innerHTML = '<div class="text-center w-100">Yükleniyor...</div>';
+    listContainer.innerHTML = '<div class="text-center">Yükleniyor...</div>';
     
     try {
         const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         
-        materialsData = []; 
+        materialsData = []; // Arrayi sıfırla
         querySnapshot.forEach((doc) => {
             materialsData.push({ id: doc.id, ...doc.data() });
         });
@@ -135,14 +118,14 @@ async function loadMaterials() {
 
     } catch (error) {
         console.error("Veri çekme hatası:", error);
-        listContainer.innerHTML = '<div class="text-danger w-100 text-center">Veriler yüklenemedi. İnternet bağlantınızı kontrol edin.</div>';
+        listContainer.innerHTML = '<div class="text-danger">Veriler yüklenemedi.</div>';
     }
 }
 
 // --- 4. HTML OLUŞTURMA (RENDER) ---
 function renderMaterials(data) {
     const listContainer = document.getElementById('catalogList');
-    listContainer.innerHTML = ""; 
+    listContainer.innerHTML = ""; // Temizle
 
     if (data.length === 0) {
         listContainer.innerHTML = '<div class="col-12 text-center">Kayıt bulunamadı.</div>';
@@ -150,9 +133,9 @@ function renderMaterials(data) {
     }
 
     data.forEach(item => {
+        // Kart HTML Yapısı
         const cardHTML = `
-            <div class="col-lg-6 col-12"> 
-                <div class="material-card shadow-sm">
+            <div class="col-lg-6 col-12"> <div class="material-card shadow-sm">
                     <div class="material-img-wrapper">
                         <img src="${item.imageUrl}" alt="${item.name}" loading="lazy">
                     </div>
@@ -170,16 +153,27 @@ function renderMaterials(data) {
     });
 }
 
-// --- 5. FİLTRELEME ---
+
+
+// --- 5. GELİŞMİŞ FİLTRELEME (Kategori + Uçak Tipi + Arama) ---
 window.filterData = function() {
+    // 1. Dropdown değerlerini al
     const selectedCat = document.getElementById('filterCategory').value;
     const selectedAir = document.getElementById('filterAircraft').value;
+    
+    // 2. Arama kutusundaki değeri al ve küçük harfe çevir (büyük/küçük harf duyarlılığını kaldırmak için)
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
+    // 3. Veriyi filtrele
     const filtered = materialsData.filter(item => {
+        // Kategori Eşleşmesi
         const catMatch = (selectedCat === "Hepsi") || (item.category === selectedCat);
-        const airMatch = (selectedAir === "Hepsi") || (item.aircraft === selectedAir);
         
+        // Uçak Tipi Eşleşmesi
+        const airMatch = (selectedAir === "Hepsi") || (item.aircraft === selectedAir);
+
+        // Metin Arama Eşleşmesi (İsim, PN veya Not içinde)
+        // (Veri yoksa boş string kabul et ki hata vermesin)
         const nameText = (item.name || "").toLowerCase();
         const pnText = (item.partNumber || "").toLowerCase();
         const noteText = (item.note || "").toLowerCase();
@@ -188,16 +182,19 @@ window.filterData = function() {
                             pnText.includes(searchTerm) || 
                             noteText.includes(searchTerm);
 
+        // Üç koşul da sağlanmalı (AND mantığı)
         return catMatch && airMatch && searchMatch;
     });
 
+    // 4. Sonuçları ekrana bas
     renderMaterials(filtered);
 };
 
-// Sayfa Yüklenince
+// Sayfa açıldığında verileri yükle
 document.addEventListener('DOMContentLoaded', loadMaterials);
 
 // --- 6. DOSYA SEÇİMİ GÖRSELLEŞTİRME ---
+// Kullanıcı resim seçtiğinde butonun altındaki yazıyı güncelle
 document.getElementById('mImage').addEventListener('change', function(event) {
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const file = event.target.files[0];
