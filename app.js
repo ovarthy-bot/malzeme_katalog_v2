@@ -5,12 +5,12 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 
 // --- KONFİGÜRASYON (Bunu kendi bilgilerinizle değiştirin) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyD....",
-    authDomain: "proje-id.firebaseapp.com",
-    projectId: "proje-id",
-    storageBucket: "proje-id.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
+  apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
+  authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
+  projectId: "pn-katalog-v2-fa1d0",
+  storageBucket: "pn-katalog-v2-fa1d0.firebasestorage.app",
+  messagingSenderId: "89223612336",
+  appId: "1:89223612336:web:fa7fc9e04e1470ea7ab875"
 };
 
 // Uygulamayı Başlat
