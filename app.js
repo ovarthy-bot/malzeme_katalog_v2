@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
   authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
   projectId: "pn-katalog-v2-fa1d0",
-  storageBucket: "pn-katalog-v2-fa1d0.appspot.com"
+  storageBucket: "pn-katalog-v2-fa1d0.appspot.com",
   messagingSenderId: "89223612336",
   appId: "1:89223612336:web:fa7fc9e04e1470ea7ab875"
 };
@@ -32,7 +32,7 @@ async function uploadImage(file) {
 
     try {
         console.log("Resim sıkıştırılıyor...");
-        const compressedFile = await imageCompression(file, options);
+        const compressedFile = await window.imageCompression(file, options);
         
         // Storage Referansı (images/zaman_dosyaAdi)
         const fileName = `${Date.now()}_${file.name}`;
