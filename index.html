@@ -3,126 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malzeme Katalog Uygulaması</title>
+    <title>Uçak Bakım Malzeme Kataloğu</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="./style.css">
+    <style>
+        /* Kart resimlerinin düzgün durması için */
+        .card-img-top { height: 200px; object-fit: cover; }
+        /* Yükleniyor animasyonu katmanı */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-    <div class="container py-4">
-        <h2 class="text-center mb-4">Uçak Malzeme Kataloğu</h2>
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
 
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                Yeni Malzeme Ekle
+    <nav class="navbar navbar-dark bg-primary shadow-sm mb-4">
+        <div class="container">
+            <span class="navbar-brand h1 mb-0">✈️ Malzeme Kataloğu</span>
+            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+                + Yeni Malzeme
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card p-3 mb-4 shadow-sm">
+            <div class="row g-2">
+                <div class="col-md-5">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Ara: İsim, P/N veya Not...">
+                </div>
+                <div class="col-md-3">
+                    <select id="filterCategory" class="form-select">
+                        <option value="">Tüm Kategoriler</option>
+                        <option value="Sarf">Sarf Malzeme</option>
+                        <option value="Avionik">Avionik</option>
+                        <option value="Mekanik">Mekanik</option>
+                        <option value="Hırdavat">Hırdavat</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="filterAircraft" class="form-select">
+                        <option value="">Tüm Uçaklar</option>
+                        <option value="A320">A320</option>
+                        <option value="A330">A330</option>
+                        <option value="B737">B737</option>
+                        <option value="Genel">Genel</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button id="btnFilter" class="btn btn-secondary w-100">Bul</button>
+                </div>
             </div>
-            <div class="card-body">
-                <form id="addForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Malzeme İsmi</label>
-                            <input type="text" class="form-control" id="mName" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Part Number (PN)</label>
-                            <input type="text" class="form-control" id="mPartNumber" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Kategori</label>
-                            <select class="form-select" id="mCategory">
-                                <option value="Vida">Vida</option>
-                                <option value="Somun">Somun</option>
-                                <option value="Perçin">Perçin</option>
-                                <option value="O-Ring">O-Ring</option>
-                                <option value="Diğer">Diğer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Uçak Tipi</label>
-                            <select class="form-select" id="mAircraft">
-                                <option value="Ortak">Ortak</option>
-                                <option value="B737">Boeing 737</option>
-                                <option value="A320">Airbus A320</option>
-                                <option value="A330">Airbus A330</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Not (Opsiyonel)</label>
-                            <input type="text" class="form-control" id="mNote" placeholder="-">
-                        </div>
-                       <div class="col-12">
-    <label class="form-label">Malzeme Fotoğrafı</label>
+        </div>
 
-    <input 
-        type="file" 
-        id="inputCamera" 
-        accept="image/*" 
-        capture="environment" 
-        class="d-none"
-    >
-
-    <input 
-        type="file" 
-        id="inputGallery" 
-        accept="image/png, image/jpeg, image/jpg" 
-        class="d-none"
-    >
-
-    <div class="d-flex gap-2">
-        <label for="inputCamera" class="btn btn-outline-danger w-50 py-3 d-flex align-items-center justify-content-center">
-            <span class="h5 m-0">📷 Çek</span>
-        </label>
-
-        <label for="inputGallery" class="btn btn-outline-primary w-50 py-3 d-flex align-items-center justify-content-center">
-            <span class="h5 m-0">🖼️ Seç</span>
-        </label>
+        <div id="catalogList" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+            </div>
     </div>
 
-    <div id="fileNameDisplay" class="text-center mt-2 text-muted fst-italic">
-        Henüz resim seçilmedi.
-    </div>
-</div>
-                        <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-success" id="submitBtn">Kaydet</button>
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Malzeme Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addForm">
+                        <div class="mb-2">
+                            <label>Malzeme Adı</label>
+                            <input type="text" id="inpName" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label>Parça Numarası (P/N)</label>
+                            <input type="text" id="inpPN" class="form-control" required>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col">
+                                <label>Kategori</label>
+                                <select id="inpCat" class="form-select" required>
+                                    <option value="Sarf">Sarf</option>
+                                    <option value="Avionik">Avionik</option>
+                                    <option value="Mekanik">Mekanik</option>
+                                    <option value="Hırdavat">Hırdavat</option>
+                                </select>
+                            </div>
+                            <div class="col">
+                                <label>Uçak Tipi</label>
+                                <select id="inpAircraft" class="form-select" required>
+                                    <option value="Genel">Genel</option>
+                                    <option value="A320">A320</option>
+                                    <option value="A330">A330</option>
+                                    <option value="B737">B737</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label>Notlar</label>
+                            <textarea id="inpNote" class="form-control" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
-                            <input type="text" class="form-control" id="searchInput" 
-                            placeholder="Arama yapın... (İsim, Part Number veya Not)" 
-                            onkeyup="filterData()">
+                            <label>Görsel (Otomatik Sıkıştırılır)</label>
+                            <input type="file" id="inpFile" class="form-control" accept="image/*" required>
                         </div>
-                    </div>
-                </form>
+                        <button type="submit" class="btn btn-success w-100">Kaydet</button>
+                    </form>
+                </div>
             </div>
         </div>
-
-        <div class="row mb-3 g-2">
-            <div class="col-md-6">
-                <select class="form-select" id="filterCategory" onchange="filterData()">
-                    <option value="Hepsi">Tüm Kategoriler</option>
-                    <option value="Vida">Vida</option>
-                    <option value="Somun">Somun</option>
-                    <option value="Perçin">Perçin</option>
-                    <option value="O-Ring">O-Ring</option>
-                    <option value="Diğer">Diğer</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <select class="form-select" id="filterAircraft" onchange="filterData()">
-                    <option value="Hepsi">Tüm Uçak Tipleri</option>
-                    <option value="Ortak">Ortak</option>
-                    <option value="B737">Boeing 737</option>
-                    <option value="A320">Airbus A320</option>
-                    <option value="A330">Airbus A330</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="catalogList" class="row g-3">
-            </div>
     </div>
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script type="module" src="app.js"></script>
 </body>
 </html>
