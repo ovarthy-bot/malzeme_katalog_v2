@@ -65,10 +65,16 @@ addForm.addEventListener('submit', async (e) => {
         const category = document.getElementById('mCategory').value;
         const aircraft = document.getElementById('mAircraft').value;
         const note = document.getElementById('mNote').value || "-";
+       // ... form verilerini al kısmı ...
         const imageFile = document.getElementById('mImage').files[0];
+        
+        // Varsayılan resim (Eğer resim yüklenmezse bu görünür)
+        let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"; 
 
-        // Önce resmi sıkıştır ve yükle, URL'i al
-        const imgUrl = await uploadImage(imageFile);
+        // Eğer kullanıcı bir dosya seçtiyse yükleme işlemini yap
+        if (imageFile) {
+             imgUrl = await uploadImage(imageFile);
+        }
 
         // Firestore'a veriyi kaydet
         await addDoc(collection(db, "materials"), {
@@ -77,7 +83,7 @@ addForm.addEventListener('submit', async (e) => {
             category: category,
             aircraft: aircraft,
             note: note,
-            imageUrl: imgUrl,
+            imageUrl: imgUrl, // Ya yüklenen resim ya da varsayılan resim gider
             createdAt: new Date()
         });
 
