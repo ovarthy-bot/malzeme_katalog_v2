@@ -58,17 +58,43 @@ onAuthStateChanged(auth, (user) => {
 // =======================
 // RESİM YÜKLEME (KİLİTLİ)
 // =======================
+// =======================
+// RESÄ°M YÃœKLEME (KÄ°LÄ°TLÄ°)
+// =======================
 async function uploadImage(file) {
-    if (!isSubmitting) throw new Error("Submit dışı upload engellendi");
-    if (!(file instanceof File)) throw new Error("Geçersiz dosya tipi");
+    if (!isSubmitting) throw new Error("Submit dÄ±ÅŸÄ± upload engellendi");
+    if (!(file instanceof File)) throw new Error("GeÃ§ersiz dosya tipi");
 
-    console.log("1. Yükleme başlıyor...");
+    console.log("1. YÃ¼kleme baÅŸlÄ±yor...", file.name, file.size);
+    
+    // Resmi sÄ±kÄ±ÅŸtÄ±r (max 1MB)
+    let compressedFile = file;
+    if (file.size > 1024 * 1024) { // 1MB'dan bÃ¼yÃ¼kse
+        console.log("2. Resim sÄ±kÄ±ÅŸtÄ±rÄ±lÄ±yor...");
+        const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+        };
+        try {
+            compressedFile = await imageCompression(file, options);
+            console.log("3. SÄ±kÄ±ÅŸtÄ±rma tamamlandÄ±:", compressedFile.size);
+        } catch (compErr) {
+            console.warn("SÄ±kÄ±ÅŸtÄ±rma baÅŸarÄ±sÄ±z, orijinal dosya kullanÄ±lÄ±yor:", compErr);
+        }
+    }
+
     const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
     const fileName = `${Date.now()}_${safeName}`;
     const storageRef = ref(storage, `images/${fileName}`);
 
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
+    console.log("4. Firebase Storage'a yÃ¼kleniyor...");
+    const snapshot = await uploadBytes(storageRef, compressedFile);
+    console.log("5. YÃ¼kleme tamamlandÄ±!");
+    
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log("6. URL alÄ±ndÄ±:", downloadURL);
+    return downloadURL;
 }
 
 // =======================
