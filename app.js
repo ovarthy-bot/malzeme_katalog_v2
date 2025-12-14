@@ -1,262 +1,179 @@
-// =======================
-// FIREBASE IMPORTLARI
-// =======================
+// --- FIREBASE KURULUMU ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"; // onAuthStateChanged ekledik
-import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// =======================
-// GLOBAL DEĞİŞKENLER
-// =======================
-let selectedImageFile = null;
-let materialsData = [];
-let isSubmitting = false;
-
-// =======================
-// FIREBASE CONFIG
-// =======================
 const firebaseConfig = {
-    apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
-    authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
-    projectId: "pn-katalog-v2-fa1d0",
-    storageBucket: "pn-katalog-v2-fa1d0.appspot.com",
-    messagingSenderId: "89223612336",
-    appId: "1:89223612336:web:fa7fc9e04e1470ea7ab875"
+  apiKey: "AIzaSyDgFmtEiKYuzQifzggyimdVgWfGHILFX7g",
+  authDomain: "pn-katalog-v2-99886.firebaseapp.com",
+  projectId: "pn-katalog-v2-99886",
+  storageBucket: "pn-katalog-v2-99886.firebasestorage.app",
+  messagingSenderId: "471134585410",
+  appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
-// =======================
-// 1. ÖNCE UYGULAMAYI BAŞLAT (SIRALAMA ÖNEMLİ!)
-// =======================
-const app = initializeApp(firebaseConfig); // <-- BU ARTIK EN ÜSTTE
-const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// =======================
-// 2. ANONİM GİRİŞ VE VERİ YÜKLEME
-// =======================
-// Sayfa açılır açılmaz veriyi çekme, ÖNCE giriş yapmasını bekle.
-signInAnonymously(auth)
-  .then(() => {
-    console.log("Anonim giriş başarılı, veriler çekiliyor...");
-    // loadMaterials(); // Buradan çağırabiliriz veya onAuthStateChanged kullanabiliriz (daha güvenli):
-  })
-  .catch((error) => {
-    console.error("Giriş Hatası:", error);
-    document.getElementById("catalogList").innerHTML = '<div class="text-danger">Giriş yapılamadı, veriler yüklenemiyor.</div>';
-  });
+// Global Değişken (Filtreleme için veriyi hafızada tutacağız)
+let allMaterials = [];
 
-// Kullanıcı durumu değiştiğinde (Giriş yapıldığında) veriyi çek
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    // Kullanıcı doğrulandı, şimdi verileri çekebiliriz
-    loadMaterials();
-  }
-});
+// DOM Elementleri
+const loadingOverlay = document.getElementById('loadingOverlay');
+const addForm = document.getElementById('addForm');
+const catalogList = document.getElementById('catalogList');
 
-// =======================
-// RESİM YÜKLEME (KİLİTLİ)
-// =======================
-// =======================
-// RESÄ°M YÃœKLEME (KÄ°LÄ°TLÄ°)
-// =======================
-async function uploadImage(file) {
-    if (!isSubmitting) throw new Error("Submit dÄ±ÅŸÄ± upload engellendi");
-    if (!(file instanceof File)) throw new Error("GeÃ§ersiz dosya tipi");
-
-    console.log("1. YÃ¼kleme baÅŸlÄ±yor...", file.name, file.size);
+// --- 1. VERİLERİ ÇEKME VE LİSTELEME ---
+async function fetchMaterials() {
+    showLoading(true);
+    catalogList.innerHTML = '';
     
-    // Resmi sÄ±kÄ±ÅŸtÄ±r (max 1MB)
-    let compressedFile = file;
-    if (file.size > 1024 * 1024) { // 1MB'dan bÃ¼yÃ¼kse
-        console.log("2. Resim sÄ±kÄ±ÅŸtÄ±rÄ±lÄ±yor...");
-        const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
-            useWebWorker: true
-        };
-        try {
-            compressedFile = await imageCompression(file, options);
-            console.log("3. SÄ±kÄ±ÅŸtÄ±rma tamamlandÄ±:", compressedFile.size);
-        } catch (compErr) {
-            console.warn("SÄ±kÄ±ÅŸtÄ±rma baÅŸarÄ±sÄ±z, orijinal dosya kullanÄ±lÄ±yor:", compErr);
-        }
-    }
-
-    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
-    const fileName = `${Date.now()}_${safeName}`;
-    const storageRef = ref(storage, `images/${fileName}`);
-
-    console.log("4. Firebase Storage'a yÃ¼kleniyor...");
-    const snapshot = await uploadBytes(storageRef, compressedFile);
-    console.log("5. YÃ¼kleme tamamlandÄ±!");
-    
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log("6. URL alÄ±ndÄ±:", downloadURL);
-    return downloadURL;
-}
-
-// =======================
-// FORM SUBMIT
-// =======================
-const addForm = document.getElementById("addForm");
-const submitBtn = document.getElementById("submitBtn");
-
-if (addForm) {
-    addForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        // Giriş yapılı mı kontrol et
-        if (!auth.currentUser) {
-            alert("Sistem bağlantısı yok (Auth eksik). Lütfen sayfayı yenileyin.");
-            return;
-        }
-
-        isSubmitting = true;
-        submitBtn.disabled = true;
-        submitBtn.innerText = "Kaydediliyor...";
-
-        try {
-            const name = document.getElementById("mName").value.trim();
-            const pn = document.getElementById("mPartNumber").value.trim();
-            const category = document.getElementById("mCategory").value;
-            const aircraft = document.getElementById("mAircraft").value;
-            const note = document.getElementById("mNote").value || "-";
-
-            let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg";
-
-            if (selectedImageFile instanceof File) {
-                submitBtn.innerText = "Resim Yükleniyor...";
-                imgUrl = await uploadImage(selectedImageFile);
-            }
-
-            submitBtn.innerText = "Veritabanına Yazılıyor...";
-
-            await addDoc(collection(db, "materials"), {
-                name,
-                partNumber: pn,
-                category,
-                aircraft,
-                note,
-                imageUrl: imgUrl,
-                createdAt: new Date(),
-                userId: auth.currentUser.uid // Kimin eklediğini de kaydedelim
-            });
-
-            alert("Kayıt Başarılı!");
-            addForm.reset();
-            selectedImageFile = null;
-            const display = document.getElementById("fileNameDisplay");
-            if (display) {
-                display.innerText = "Henüz resim seçilmedi.";
-                display.className = "text-muted fst-italic text-center mt-2";
-            }
-            loadMaterials();
-
-        } catch (err) {
-            console.error("KAYIT HATASI:", err);
-            alert("Hata: " + err.message);
-        } finally {
-            isSubmitting = false;
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Kaydet";
-        }
-    });
-}
-
-// =======================
-// VERİ ÇEKME
-// =======================
-async function loadMaterials() {
-    const listContainer = document.getElementById("catalogList");
-    if (listContainer) listContainer.innerHTML = "<div class='text-center'>Yükleniyor...</div>";
-
     try {
+        // Tarihe göre yeniden eskiye sırala
         const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
+        const querySnapshot = await getDocs(q);
         
-        materialsData = [];
-        snap.forEach((doc) => {
-            materialsData.push({ id: doc.id, ...doc.data() });
+        allMaterials = [];
+        querySnapshot.forEach((doc) => {
+            allMaterials.push({ id: doc.id, ...doc.data() });
         });
 
-        renderMaterials(materialsData);
-    } catch (err) {
-        console.error("VERİ ÇEKME HATASI:", err);
-        // Hata detayını ekrana yazdıralım ki görelim
-        if (listContainer) listContainer.innerHTML = `<div class='text-danger text-center'>Veriler yüklenemedi.<br><small>${err.code || err.message}</small></div>`;
+        renderMaterials(allMaterials);
+    } catch (error) {
+        console.error("Veri çekme hatası:", error);
+        alert("Veriler yüklenemedi!");
+    } finally {
+        showLoading(false);
     }
 }
 
-// =======================
-// RENDER FONKSİYONU
-// =======================
-function renderMaterials(data) {
-    const listContainer = document.getElementById("catalogList");
-    if (!listContainer) return;
-
-    listContainer.innerHTML = "";
-    if (data.length === 0) {
-        listContainer.innerHTML = "<div class='col-12 text-center'>Kayıt yok</div>";
+// Ekrana Kartları Basan Fonksiyon
+function renderMaterials(dataList) {
+    catalogList.innerHTML = "";
+    
+    if(dataList.length === 0) {
+        catalogList.innerHTML = `<div class="col-12 text-center mt-5"><h5>Kayıt bulunamadı.</h5></div>`;
         return;
     }
 
-    data.forEach((item) => {
-        listContainer.innerHTML += `
-        <div class="col-lg-6 col-12">
-            <div class="material-card shadow-sm">
-                <div class="material-img-wrapper">
-                    <img src="${item.imageUrl}" loading="lazy" alt="${item.name}">
-                </div>
-                <div class="material-content">
-                    <div><b>Malzeme:</b> ${item.name}</div>
-                    <div><b>PN:</b> ${item.partNumber}</div>
-                    <div><b>Kategori:</b> ${item.category}</div>
-                    <div><b>Uçak:</b> ${item.aircraft}</div>
-                    <div><b>Not:</b> ${item.note}</div>
+    dataList.forEach(item => {
+        const html = `
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <img src="${item.imageUrl}" class="card-img-top" alt="${item.name}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-primary">${item.category}</span>
+                        <span class="badge bg-dark">${item.aircraft}</span>
+                    </div>
+                    <h5 class="card-title">${item.name}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">P/N: ${item.pn}</h6>
+                    <p class="card-text small">${item.note}</p>
                 </div>
             </div>
-        </div>`;
+        </div>
+        `;
+        catalogList.innerHTML += html;
     });
 }
 
-// =======================
-// FİLTRELEME
-// =======================
-window.filterData = function () {
-    const cat = document.getElementById("filterCategory").value;
-    const air = document.getElementById("filterAircraft").value;
-    const term = document.getElementById("searchInput").value.toLowerCase();
+// --- 2. YENİ MALZEME EKLEME (RESİM SIKIŞTIRMA DAHİL) ---
+addForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const file = document.getElementById('inpFile').files[0];
+    if (!file) return;
 
-    const filtered = materialsData.filter((i) => {
-        const t = (i.name || "").toLowerCase() + (i.partNumber || "").toLowerCase() + (i.note || "").toLowerCase();
-        return (
-            (cat === "Hepsi" || i.category === cat) &&
-            (air === "Hepsi" || i.aircraft === air) &&
-            t.includes(term)
-        );
+    showLoading(true);
+
+    // CompressorJS ile resmi sıkıştır
+    new Compressor(file, {
+        quality: 0.6, // Kaliteyi %60'a düşür
+        maxWidth: 1024, // Genişliği max 1024px yap
+        success(result) {
+            uploadToFirebase(result);
+        },
+        error(err) {
+            console.error(err.message);
+            showLoading(false);
+            alert("Resim sıkıştırma hatası!");
+        },
     });
-    renderMaterials(filtered);
-};
+});
 
-// =======================
-// DOSYA SEÇİMİ
-// =======================
-function handleFileSelect(e) {
-    const file = e.target.files?.[0];
-    if (file instanceof File) {
-        selectedImageFile = file;
-        const d = document.getElementById("fileNameDisplay");
-        if (d) {
-            d.innerText = `Seçilen Dosya: ${file.name}`;
-            d.className = "text-success fw-bold text-center mt-2";
-        }
+async function uploadToFirebase(compressedFile) {
+    try {
+        // 1. Resmi Storage'a yükle
+        const storageRef = ref(storage, 'material-images/' + Date.now() + '_' + compressedFile.name);
+        const snapshot = await uploadBytes(storageRef, compressedFile);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        // 2. Veriyi Firestore'a kaydet
+        const newMaterial = {
+            name: document.getElementById('inpName').value,
+            pn: document.getElementById('inpPN').value,
+            category: document.getElementById('inpCat').value,
+            aircraft: document.getElementById('inpAircraft').value,
+            note: document.getElementById('inpNote').value,
+            imageUrl: downloadURL,
+            createdAt: serverTimestamp()
+        };
+
+        await addDoc(collection(db, "materials"), newMaterial);
+
+        // 3. Formu temizle ve yenile
+        addForm.reset();
+        const modalEl = document.getElementById('addModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        modalInstance.hide();
+        
+        fetchMaterials(); // Listeyi güncelle
+        alert("Malzeme başarıyla eklendi!");
+
+    } catch (error) {
+        console.error("Yükleme hatası:", error);
+        alert("Bir hata oluştu: " + error.message);
+    } finally {
+        showLoading(false);
     }
 }
 
-document.getElementById("inputCamera")?.addEventListener("change", handleFileSelect);
-document.getElementById("inputGallery")?.addEventListener("change", handleFileSelect);
+// --- 3. ARAMA VE FİLTRELEME ---
+// Hem butona basınca hem de inputlara yazınca filtreleme tetiklensin
+document.getElementById('btnFilter').addEventListener('click', applyFilters);
+document.getElementById('searchInput').addEventListener('keyup', applyFilters);
+document.getElementById('filterCategory').addEventListener('change', applyFilters);
+document.getElementById('filterAircraft').addEventListener('change', applyFilters);
 
-// DİKKAT: document.addEventListener("DOMContentLoaded", loadMaterials); SATIRINI SİLDİK.
-// Artık veriyi 'onAuthStateChanged' içinde çağırıyoruz.
+function applyFilters() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const catFilter = document.getElementById('filterCategory').value;
+    const aircraftFilter = document.getElementById('filterAircraft').value;
+
+    const filtered = allMaterials.filter(item => {
+        // Arama Metni Kontrolü (Ad, P/N veya Not içinde)
+        const matchesSearch = 
+            item.name.toLowerCase().includes(searchText) || 
+            item.pn.toLowerCase().includes(searchText) || 
+            (item.note && item.note.toLowerCase().includes(searchText));
+
+        // Kategori Kontrolü
+        const matchesCat = catFilter === "" || item.category === catFilter;
+
+        // Uçak Tipi Kontrolü
+        const matchesAircraft = aircraftFilter === "" || item.aircraft === aircraftFilter;
+
+        return matchesSearch && matchesCat && matchesAircraft;
+    });
+
+    renderMaterials(filtered);
+}
+
+// Yardımcı Fonksiyon
+function showLoading(show) {
+    loadingOverlay.style.display = show ? 'flex' : 'none';
+}
+
+// Sayfa açıldığında verileri çek
+window.addEventListener('DOMContentLoaded', fetchMaterials);
