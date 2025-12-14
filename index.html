@@ -106,36 +106,30 @@
                             <label>Notlar</label>
                             <textarea id="inpNote" class="form-control" rows="2"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <label>Görsel (Otomatik Sıkıştırılır)</label>
-<!-- Kamera -->
-<input
-  type="file"
-  id="fileCamera"
-  accept="image/*"
-  capture="environment"
-  hidden
->
 
-<!-- Galeri -->
-<input
-  type="file"
-  id="fileGallery"
-  accept="image/*"
-  hidden
->
 
-                            <button type="button" class="btn btn-outline-primary w-100 mb-2"
-  id="btnCamera">
-  📷 Kamera ile Çek
-</button>
+<div class="mb-3">
+    <label>Görsel</label>
 
-<button type="button" class="btn btn-outline-secondary w-100"
-  id="btnGallery">
-  🖼️ Galeriden Seç
-</button>
+    <!-- Kamera -->
+    <input type="file" id="fileCamera" accept="image/*" capture="environment" hidden>
 
-                        </div>
+    <!-- Galeri -->
+    <input type="file" id="fileGallery" accept="image/*" hidden>
+
+    <!-- Gerçek input (JS kullanıyor) -->
+    <input type="file" id="inpFile" hidden required>
+
+    <button type="button" class="btn btn-outline-primary w-100 mb-2" id="btnCamera">
+        📷 Kamera ile Çek
+    </button>
+
+    <button type="button" class="btn btn-outline-secondary w-100" id="btnGallery">
+        🖼️ Galeriden Seç
+    </button>
+</div>
+
+
                         <button type="submit" class="btn btn-success w-100">Kaydet</button>
                     </form>
                 </div>
