@@ -153,17 +153,40 @@ function renderMaterials(data) {
     });
 }
 
-// --- 5. FİLTRELEME ---
+
+
+// --- 5. GELİŞMİŞ FİLTRELEME (Kategori + Uçak Tipi + Arama) ---
 window.filterData = function() {
+    // 1. Dropdown değerlerini al
     const selectedCat = document.getElementById('filterCategory').value;
     const selectedAir = document.getElementById('filterAircraft').value;
+    
+    // 2. Arama kutusundaki değeri al ve küçük harfe çevir (büyük/küçük harf duyarlılığını kaldırmak için)
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
+    // 3. Veriyi filtrele
     const filtered = materialsData.filter(item => {
+        // Kategori Eşleşmesi
         const catMatch = (selectedCat === "Hepsi") || (item.category === selectedCat);
+        
+        // Uçak Tipi Eşleşmesi
         const airMatch = (selectedAir === "Hepsi") || (item.aircraft === selectedAir);
-        return catMatch && airMatch;
+
+        // Metin Arama Eşleşmesi (İsim, PN veya Not içinde)
+        // (Veri yoksa boş string kabul et ki hata vermesin)
+        const nameText = (item.name || "").toLowerCase();
+        const pnText = (item.partNumber || "").toLowerCase();
+        const noteText = (item.note || "").toLowerCase();
+
+        const searchMatch = nameText.includes(searchTerm) || 
+                            pnText.includes(searchTerm) || 
+                            noteText.includes(searchTerm);
+
+        // Üç koşul da sağlanmalı (AND mantığı)
+        return catMatch && airMatch && searchMatch;
     });
 
+    // 4. Sonuçları ekrana bas
     renderMaterials(filtered);
 };
 
