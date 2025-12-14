@@ -23,55 +23,35 @@ const storage = getStorage(app);
 // Global Değişkenler
 let materialsData = []; // Filtreleme için veriyi burada tutacağız
 
-// --- 1. GÜVENLİ RESİM YÜKLEME FONKSİYONU ---
+// --- 1. SADELEŞTİRİLMİŞ RESİM YÜKLEME (SIKIŞTIRMA YOK) ---
 async function uploadImage(file) {
-    const options = {
-        maxSizeMB: 0.5,         // 0.1MB çok düşük olabilir, 0.5MB yaptık
-        maxWidthOrHeight: 1024, // 800 yerine 1024 standarttır
-        useWebWorker: true
-    };
-
     try {
-        console.log("1. İşlem başlıyor...");
+        console.log("1. Yükleme işlemi başladı...");
         
-        // Varsayılan olarak orijinal dosyayı seçiyoruz
-        let fileToUpload = file; 
-
-        // Sıkıştırma işlemini deniyoruz (Hata verirse işlemi durdurmayacak)
-        if (window.imageCompression) {
-            try {
-                console.log("2. Sıkıştırma deneniyor...");
-                const compressedFile = await window.imageCompression(file, options);
-                fileToUpload = compressedFile; // Başarılıysa sıkıştırılmışı kullan
-                console.log("3. Sıkıştırma başarılı.");
-            } catch (compError) {
-                console.warn("⚠️ Sıkıştırma başarısız oldu, orijinal dosya kullanılacak.", compError);
-                // Hata olsa bile döngü kırılmaz, orijinal dosyayla devam eder.
-            }
-        } else {
-            console.warn("⚠️ Sıkıştırma kütüphanesi (imageCompression) bulunamadı.");
-        }
-        
-        // Dosya ismindeki Türkçe karakterleri temizle (Sorun çıkarmaması için)
+        // Dosya ismini temizle (Türkçe karakter ve boşluk sorunu olmasın)
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
         const fileName = `${Date.now()}_${safeName}`;
         
-        console.log("4. Firebase'e yükleniyor...", fileName);
-        
+        // Storage referansı oluştur
         const storageRef = ref(storage, `images/${fileName}`);
+        
+        console.log("2. Firebase Storage'a gönderiliyor:", fileName);
 
-        // Yükleme
-        const snapshot = await uploadBytes(storageRef, fileToUpload);
-        console.log("5. Yükleme bitti, URL alınıyor...");
+        // Doğrudan dosyayı yükle (Sıkıştırma kütüphanesini kullanmıyoruz)
+        const snapshot = await uploadBytes(storageRef, file);
         
+        console.log("3. Yükleme tamamlandı, Link alınıyor...");
+        
+        // Linki al
         const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log("6. İşlem tamam! URL:", downloadURL);
         
+        console.log("4. Başarılı! Resim Linki:", downloadURL);
         return downloadURL;
 
     } catch (error) {
-        console.error("KRİTİK HATA:", error);
-        throw new Error("Resim yüklenirken hata oluştu: " + error.message);
+        console.error("YÜKLEME HATASI:", error);
+        alert("Resim yüklenirken hata oluştu: " + error.message); // Ekrana hata bas
+        throw error; // Hatayı ana fonksiyona fırlat
     }
 }
 
