@@ -40,6 +40,42 @@
 </nav>
 
 <div class="container">
+<div class="card p-3 mb-4 shadow-sm">
+    <div class="row g-2">
+        <div class="col-md-5">
+            <input type="text" id="searchInput" class="form-control"
+                   placeholder="Ara: İsim, P/N veya Not">
+        </div>
+
+        <div class="col-md-3">
+            <select id="filterCategory" class="form-select">
+                <option value="">Tüm Kategoriler</option>
+                <option>Sarf</option>
+                <option>Avionik</option>
+                <option>Mekanik</option>
+                <option>Hırdavat</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <select id="filterAircraft" class="form-select">
+                <option value="">Tüm Uçaklar</option>
+                <option>Genel</option>
+                <option>A320</option>
+                <option>A330</option>
+                <option>B737</option>
+            </select>
+        </div>
+
+        <div class="col-md-1">
+            <button id="btnFilter" class="btn btn-secondary w-100">
+                Bul
+            </button>
+        </div>
+    </div>
+</div>
+
+    
     <div id="catalogList" class="row row-cols-1 row-cols-md-3 g-4"></div>
 </div>
 
