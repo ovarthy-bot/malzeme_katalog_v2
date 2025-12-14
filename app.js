@@ -192,3 +192,20 @@ window.filterData = function() {
 
 // Sayfa açıldığında verileri yükle
 document.addEventListener('DOMContentLoaded', loadMaterials);
+
+// --- 6. DOSYA SEÇİMİ GÖRSELLEŞTİRME ---
+// Kullanıcı resim seçtiğinde butonun altındaki yazıyı güncelle
+document.getElementById('mImage').addEventListener('change', function(event) {
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const file = event.target.files[0];
+
+    if (file) {
+        fileNameDisplay.innerText = `Seçilen Dosya: ${file.name}`;
+        fileNameDisplay.classList.remove('text-muted');
+        fileNameDisplay.classList.add('text-success', 'fw-bold');
+    } else {
+        fileNameDisplay.innerText = "Henüz resim seçilmedi.";
+        fileNameDisplay.classList.add('text-muted');
+        fileNameDisplay.classList.remove('text-success', 'fw-bold');
+    }
+});
