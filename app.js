@@ -23,31 +23,55 @@ const storage = getStorage(app);
 // Global Değişkenler
 let materialsData = []; // Filtreleme için veriyi burada tutacağız
 
-// --- 1. RESİM SIKIŞTIRMA VE YÜKLEME ---
+// --- 1. GÜVENLİ RESİM YÜKLEME FONKSİYONU ---
 async function uploadImage(file) {
-    // Sıkıştırma ayarları
     const options = {
-        maxSizeMB: 0.1,          // Hedef: 100KB altı
-        maxWidthOrHeight: 800,   // Maksimum genişlik/yükseklik
+        maxSizeMB: 0.5,         // 0.1MB çok düşük olabilir, 0.5MB yaptık
+        maxWidthOrHeight: 1024, // 800 yerine 1024 standarttır
         useWebWorker: true
     };
 
     try {
-        console.log("Resim sıkıştırılıyor...");
-        const compressedFile = await window.imageCompression(file, options);
+        console.log("1. İşlem başlıyor...");
         
-        // Storage Referansı (images/zaman_dosyaAdi)
-        const fileName = `${Date.now()}_${file.name}`;
+        // Varsayılan olarak orijinal dosyayı seçiyoruz
+        let fileToUpload = file; 
+
+        // Sıkıştırma işlemini deniyoruz (Hata verirse işlemi durdurmayacak)
+        if (window.imageCompression) {
+            try {
+                console.log("2. Sıkıştırma deneniyor...");
+                const compressedFile = await window.imageCompression(file, options);
+                fileToUpload = compressedFile; // Başarılıysa sıkıştırılmışı kullan
+                console.log("3. Sıkıştırma başarılı.");
+            } catch (compError) {
+                console.warn("⚠️ Sıkıştırma başarısız oldu, orijinal dosya kullanılacak.", compError);
+                // Hata olsa bile döngü kırılmaz, orijinal dosyayla devam eder.
+            }
+        } else {
+            console.warn("⚠️ Sıkıştırma kütüphanesi (imageCompression) bulunamadı.");
+        }
+        
+        // Dosya ismindeki Türkçe karakterleri temizle (Sorun çıkarmaması için)
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+        const fileName = `${Date.now()}_${safeName}`;
+        
+        console.log("4. Firebase'e yükleniyor...", fileName);
+        
         const storageRef = ref(storage, `images/${fileName}`);
 
         // Yükleme
-        const snapshot = await uploadBytes(storageRef, compressedFile);
+        const snapshot = await uploadBytes(storageRef, fileToUpload);
+        console.log("5. Yükleme bitti, URL alınıyor...");
+        
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("6. İşlem tamam! URL:", downloadURL);
+        
         return downloadURL;
 
     } catch (error) {
-        console.error("Resim hatası:", error);
-        throw error;
+        console.error("KRİTİK HATA:", error);
+        throw new Error("Resim yüklenirken hata oluştu: " + error.message);
     }
 }
 
