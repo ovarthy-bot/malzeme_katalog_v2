@@ -1,3 +1,5 @@
+let selectedImageFile = null; // Dosyayı burada tutacağız
+
 // Firebase Modüllerini İçe Aktar
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -8,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
   authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
   projectId: "pn-katalog-v2-fa1d0",
-  storageBucket: "pn-katalog-v2-fa1d0.firebasestorage.app",
+  storageBucket: "pn-katalog-v2-fa1d0.appspot.com",
   messagingSenderId: "89223612336",
   appId: "1:89223612336:web:fa7fc9e04e1470ea7ab875"
 };
@@ -32,7 +34,7 @@ async function uploadImage(file) {
 
     try {
         console.log("Resim sıkıştırılıyor...");
-        const compressedFile = await imageCompression(file, options);
+        const compressedFile = await window.imageCompression(file, options);
         
         // Storage Referansı (images/zaman_dosyaAdi)
         const fileName = `${Date.now()}_${file.name}`;
@@ -193,19 +195,28 @@ window.filterData = function() {
 // Sayfa açıldığında verileri yükle
 document.addEventListener('DOMContentLoaded', loadMaterials);
 
-// --- 6. DOSYA SEÇİMİ GÖRSELLEŞTİRME ---
-// Kullanıcı resim seçtiğinde butonun altındaki yazıyı güncelle
-document.getElementById('mImage').addEventListener('change', function(event) {
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
+// --- 6. YENİ DOSYA SEÇİM MANTIĞI (KAMERA VE GALERİ) ---
+
+// Ortak dosya işleme fonksiyonu
+function handleFileSelect(event) {
     const file = event.target.files[0];
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
 
     if (file) {
+        selectedImageFile = file; // Global değişkene ata
+        
         fileNameDisplay.innerText = `Seçilen Dosya: ${file.name}`;
         fileNameDisplay.classList.remove('text-muted');
         fileNameDisplay.classList.add('text-success', 'fw-bold');
-    } else {
-        fileNameDisplay.innerText = "Henüz resim seçilmedi.";
-        fileNameDisplay.classList.add('text-muted');
-        fileNameDisplay.classList.remove('text-success', 'fw-bold');
+    }
+}
+
+// Kamera inputunu dinle
+const camInput = document.getElementById('inputCamera');
+if (camInput) camInput.addEventListener('change', handleFileSelect);
+
+// Galeri inputunu dinle
+const galInput = document.getElementById('inputGallery');
+if (galInput) galInput.addEventListener('change', handleFileSelect);
     }
 });
