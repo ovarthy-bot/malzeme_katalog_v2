@@ -68,7 +68,7 @@ addForm.addEventListener('submit', async (e) => {
         const aircraft = document.getElementById('mAircraft').value;
         const note = document.getElementById('mNote').value || "-";
        // ... form verilerini al kısmı ...
-        const imageFile = document.getElementById('mImage').files[0];
+        const imageFile = selectedImageFile;
         
         // Varsayılan resim (Eğer resim yüklenmezse bu görünür)
         let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"; 
