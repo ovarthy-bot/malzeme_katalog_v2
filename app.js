@@ -1,11 +1,12 @@
-let selectedImageFile = null; // Dosyayı burada tutacağız
+// --- GLOBAL DEĞİŞKEN (Resmi burada tutacağız) ---
+let selectedImageFile = null; 
 
 // Firebase Modüllerini İçe Aktar
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// --- KONFİGÜRASYON (Bunu kendi bilgilerinizle değiştirin) ---
+// --- KONFİGÜRASYON ---
 const firebaseConfig = {
   apiKey: "AIzaSyCdOJZIlWUWigzW_9-Bi77f_ll_k9zZ5GU",
   authDomain: "pn-katalog-v2-fa1d0.firebaseapp.com",
@@ -21,37 +22,32 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // Global Değişkenler
-let materialsData = []; // Filtreleme için veriyi burada tutacağız
+let materialsData = [];
 
-// --- 1. SADELEŞTİRİLMİŞ RESİM YÜKLEME (SIKIŞTIRMA YOK) ---
+// --- 1. RESİM YÜKLEME FONKSİYONU (SADE VE GÜVENLİ) ---
 async function uploadImage(file) {
     try {
-        console.log("1. Yükleme işlemi başladı...");
+        console.log("1. Yükleme başlıyor...");
         
-        // Dosya ismini temizle (Türkçe karakter ve boşluk sorunu olmasın)
+        // Dosya ismini temizle
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
         const fileName = `${Date.now()}_${safeName}`;
         
-        // Storage referansı oluştur
+        // Storage referansı
         const storageRef = ref(storage, `images/${fileName}`);
-        
-        console.log("2. Firebase Storage'a gönderiliyor:", fileName);
 
-        // Doğrudan dosyayı yükle (Sıkıştırma kütüphanesini kullanmıyoruz)
+        // Dosyayı yükle
         const snapshot = await uploadBytes(storageRef, file);
-        
-        console.log("3. Yükleme tamamlandı, Link alınıyor...");
         
         // Linki al
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("2. Yükleme başarılı: ", downloadURL);
         
-        console.log("4. Başarılı! Resim Linki:", downloadURL);
         return downloadURL;
 
     } catch (error) {
-        console.error("YÜKLEME HATASI:", error);
-        alert("Resim yüklenirken hata oluştu: " + error.message); // Ekrana hata bas
-        throw error; // Hatayı ana fonksiyona fırlat
+        console.error("Yükleme Hatası:", error);
+        throw error;
     }
 }
 
@@ -59,63 +55,78 @@ async function uploadImage(file) {
 const addForm = document.getElementById('addForm');
 const submitBtn = document.getElementById('submitBtn');
 
-addForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Kaydediliyor...";
+if(addForm) {
+    addForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Kaydediliyor...";
 
-    try {
-        // Form verilerini al
-        const name = document.getElementById('mName').value;
-        const pn = document.getElementById('mPartNumber').value;
-        const category = document.getElementById('mCategory').value;
-        const aircraft = document.getElementById('mAircraft').value;
-        const note = document.getElementById('mNote').value || "-";
-       // ... form verilerini al kısmı ...
-        const imageFile = selectedImageFile;
-        
-        // Varsayılan resim (Eğer resim yüklenmezse bu görünür)
-        let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"; 
+        try {
+            const name = document.getElementById('mName').value;
+            const pn = document.getElementById('mPartNumber').value;
+            const category = document.getElementById('mCategory').value;
+            const aircraft = document.getElementById('mAircraft').value;
+            const note = document.getElementById('mNote').value || "-";
+            
+            // --- DÜZELTME: Artık mImage yok, selectedImageFile kullanıyoruz ---
+            const imageFile = selectedImageFile; 
+            
+            // Varsayılan resim
+            let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg"; 
 
-        // Eğer kullanıcı bir dosya seçtiyse yükleme işlemini yap
-        if (imageFile) {
-             imgUrl = await uploadImage(imageFile);
+            // Resim seçildiyse yükle
+            if (imageFile) {
+                 submitBtn.innerText = "Resim Yükleniyor...";
+                 imgUrl = await uploadImage(imageFile);
+            }
+
+            submitBtn.innerText = "Veritabanına Yazılıyor...";
+
+            // Firestore'a kaydet
+            await addDoc(collection(db, "materials"), {
+                name: name,
+                partNumber: pn,
+                category: category,
+                aircraft: aircraft,
+                note: note,
+                imageUrl: imgUrl,
+                createdAt: new Date()
+            });
+
+            alert("Kayıt Başarılı!");
+            addForm.reset();
+            
+            // Seçimi sıfırla
+            selectedImageFile = null;
+            const display = document.getElementById('fileNameDisplay');
+            if(display) {
+                display.innerText = "Henüz resim seçilmedi.";
+                display.classList.remove('text-success', 'fw-bold');
+                display.classList.add('text-muted');
+            }
+
+            loadMaterials(); 
+
+        } catch (error) {
+            console.error("Hata:", error);
+            alert("Bir hata oluştu: " + error.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Kaydet";
         }
+    });
+}
 
-        // Firestore'a veriyi kaydet
-        await addDoc(collection(db, "materials"), {
-            name: name,
-            partNumber: pn,
-            category: category,
-            aircraft: aircraft,
-            note: note,
-            imageUrl: imgUrl, // Ya yüklenen resim ya da varsayılan resim gider
-            createdAt: new Date()
-        });
-
-        alert("Malzeme başarıyla eklendi!");
-        addForm.reset();
-        loadMaterials(); // Listeyi yenile
-
-    } catch (error) {
-        console.error("Hata:", error);
-        alert("Bir hata oluştu: " + error.message);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Kaydet";
-    }
-});
-
-// --- 3. VERİLERİ ÇEKME VE LİSTELEME ---
+// --- 3. VERİLERİ ÇEKME ---
 async function loadMaterials() {
     const listContainer = document.getElementById('catalogList');
-    listContainer.innerHTML = '<div class="text-center">Yükleniyor...</div>';
+    if(listContainer) listContainer.innerHTML = '<div class="text-center">Yükleniyor...</div>';
     
     try {
         const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         
-        materialsData = []; // Arrayi sıfırla
+        materialsData = [];
         querySnapshot.forEach((doc) => {
             materialsData.push({ id: doc.id, ...doc.data() });
         });
@@ -124,14 +135,16 @@ async function loadMaterials() {
 
     } catch (error) {
         console.error("Veri çekme hatası:", error);
-        listContainer.innerHTML = '<div class="text-danger">Veriler yüklenemedi.</div>';
+        if(listContainer) listContainer.innerHTML = '<div class="text-danger">Veriler yüklenemedi.</div>';
     }
 }
 
-// --- 4. HTML OLUŞTURMA (RENDER) ---
+// --- 4. HTML RENDER ---
 function renderMaterials(data) {
     const listContainer = document.getElementById('catalogList');
-    listContainer.innerHTML = ""; // Temizle
+    if(!listContainer) return;
+    
+    listContainer.innerHTML = ""; 
 
     if (data.length === 0) {
         listContainer.innerHTML = '<div class="col-12 text-center">Kayıt bulunamadı.</div>';
@@ -139,18 +152,17 @@ function renderMaterials(data) {
     }
 
     data.forEach(item => {
-        // Kart HTML Yapısı
         const cardHTML = `
             <div class="col-lg-6 col-12"> <div class="material-card shadow-sm">
                     <div class="material-img-wrapper">
                         <img src="${item.imageUrl}" alt="${item.name}" loading="lazy">
                     </div>
                     <div class="material-content">
-                        <div><span class="label-bold">Malzeme İsmi:</span> <span class="text-value">${item.name}</span></div>
-                        <div><span class="label-bold">Part Number:</span> <span class="text-value">${item.partNumber}</span></div>
-                        <div><span class="label-bold">Kategori:</span> <span class="text-value">${item.category}</span></div>
-                        <div><span class="label-bold">Uçak Tipi:</span> <span class="text-value">${item.aircraft}</span></div>
-                        <div><span class="label-bold">Not:</span> <span class="text-value">${item.note}</span></div>
+                        <div><span class="label-bold">Malzeme:</span> ${item.name}</div>
+                        <div><span class="label-bold">PN:</span> ${item.partNumber}</div>
+                        <div><span class="label-bold">Kategori:</span> ${item.category}</div>
+                        <div><span class="label-bold">Uçak:</span> ${item.aircraft}</div>
+                        <div><span class="label-bold">Not:</span> ${item.note}</div>
                     </div>
                 </div>
             </div>
@@ -159,27 +171,16 @@ function renderMaterials(data) {
     });
 }
 
-
-
-// --- 5. GELİŞMİŞ FİLTRELEME (Kategori + Uçak Tipi + Arama) ---
+// --- 5. FİLTRELEME ---
 window.filterData = function() {
-    // 1. Dropdown değerlerini al
     const selectedCat = document.getElementById('filterCategory').value;
     const selectedAir = document.getElementById('filterAircraft').value;
-    
-    // 2. Arama kutusundaki değeri al ve küçük harfe çevir (büyük/küçük harf duyarlılığını kaldırmak için)
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
-    // 3. Veriyi filtrele
     const filtered = materialsData.filter(item => {
-        // Kategori Eşleşmesi
         const catMatch = (selectedCat === "Hepsi") || (item.category === selectedCat);
-        
-        // Uçak Tipi Eşleşmesi
         const airMatch = (selectedAir === "Hepsi") || (item.aircraft === selectedAir);
-
-        // Metin Arama Eşleşmesi (İsim, PN veya Not içinde)
-        // (Veri yoksa boş string kabul et ki hata vermesin)
+        
         const nameText = (item.name || "").toLowerCase();
         const pnText = (item.partNumber || "").toLowerCase();
         const noteText = (item.note || "").toLowerCase();
@@ -188,37 +189,32 @@ window.filterData = function() {
                             pnText.includes(searchTerm) || 
                             noteText.includes(searchTerm);
 
-        // Üç koşul da sağlanmalı (AND mantığı)
         return catMatch && airMatch && searchMatch;
     });
 
-    // 4. Sonuçları ekrana bas
     renderMaterials(filtered);
 };
 
-// Sayfa açıldığında verileri yükle
 document.addEventListener('DOMContentLoaded', loadMaterials);
 
-// --- 6. YENİ DOSYA SEÇİM MANTIĞI (KAMERA VE GALERİ) ---
-
-// Ortak dosya işleme fonksiyonu
+// --- 6. DOSYA SEÇİM MANTIĞI ---
 function handleFileSelect(event) {
     const file = event.target.files[0];
     const fileNameDisplay = document.getElementById('fileNameDisplay');
 
     if (file) {
-        selectedImageFile = file; // Global değişkene ata
+        selectedImageFile = file; 
         
-        fileNameDisplay.innerText = `Seçilen Dosya: ${file.name}`;
-        fileNameDisplay.classList.remove('text-muted');
-        fileNameDisplay.classList.add('text-success', 'fw-bold');
+        if(fileNameDisplay) {
+            fileNameDisplay.innerText = `Seçilen Dosya: ${file.name}`;
+            fileNameDisplay.classList.remove('text-muted');
+            fileNameDisplay.classList.add('text-success', 'fw-bold');
+        }
     }
 }
 
-// Kamera inputunu dinle
 const camInput = document.getElementById('inputCamera');
 if (camInput) camInput.addEventListener('change', handleFileSelect);
 
-// Galeri inputunu dinle
 const galInput = document.getElementById('inputGallery');
 if (galInput) galInput.addEventListener('change', handleFileSelect);
