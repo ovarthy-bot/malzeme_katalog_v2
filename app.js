@@ -218,5 +218,3 @@ if (camInput) camInput.addEventListener('change', handleFileSelect);
 // Galeri inputunu dinle
 const galInput = document.getElementById('inputGallery');
 if (galInput) galInput.addEventListener('change', handleFileSelect);
-    }
-});
