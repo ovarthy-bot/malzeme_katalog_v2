@@ -52,6 +52,7 @@ async function fetchMaterials() {
 }
 
 function render() {
+    
     catalogList.innerHTML = "";
     allMaterials.forEach(m => {
         catalogList.innerHTML += `
@@ -76,6 +77,70 @@ function render() {
         </div>`;
     });
 }
+
+/* SEARCH + FILTER */
+
+document.getElementById("btnFilter").onclick = applyFilters;
+document.getElementById("searchInput").onkeyup = applyFilters;
+document.getElementById("filterCategory").onchange = applyFilters;
+document.getElementById("filterAircraft").onchange = applyFilters;
+
+function applyFilters() {
+    const text = searchInput.value.toLowerCase();
+    const cat = filterCategory.value;
+    const ac = filterAircraft.value;
+
+    const filtered = allMaterials.filter(m => {
+
+        const matchesText =
+            m.name.toLowerCase().includes(text) ||
+            m.pn.toLowerCase().includes(text) ||
+            (m.note && m.note.toLowerCase().includes(text));
+
+        const matchesCat = !cat || m.category === cat;
+        const matchesAc = !ac || m.aircraft === ac;
+
+        return matchesText && matchesCat && matchesAc;
+    });
+
+    renderFiltered(filtered);
+}
+
+function renderFiltered(list) {
+    catalogList.innerHTML = "";
+
+    if (!list.length) {
+        catalogList.innerHTML =
+            `<div class="col-12 text-center mt-5">
+                <h6>Kayıt bulunamadı</h6>
+             </div>`;
+        return;
+    }
+
+    list.forEach(m => {
+        catalogList.innerHTML += `
+        <div class="col">
+            <div class="card h-100">
+                <img src="${m.imageUrl}" class="card-img-top">
+                <div class="card-body">
+                    <span class="badge bg-primary">${m.category}</span>
+                    <span class="badge bg-dark">${m.aircraft}</span>
+                    <h5 class="mt-2">${m.name}</h5>
+                    <small>P/N: ${m.pn}</small>
+                    <p class="small">${m.note || ""}</p>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-warning btn-sm w-50"
+                            onclick="editMaterial('${m.id}')">Düzenle</button>
+                        <button class="btn btn-danger btn-sm w-50"
+                            onclick="deleteMaterial('${m.id}','${m.imageUrl}')">Sil</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+}
+
 
 window.editMaterial = id => {
     const m = allMaterials.find(x => x.id === id);
