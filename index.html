@@ -51,9 +51,18 @@
                             <input type="text" class="form-control" id="mNote" placeholder="-">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Malzeme Fotoğrafı</label>
-                            <input type="file" class="form-control" id="mImage" accept="image/*">
-                        </div>
+    <label class="form-label">Malzeme Fotoğrafı</label>
+    
+    <input type="file" class="form-control d-none" id="mImage" accept="image/*">
+    
+    <label for="mImage" class="btn btn-outline-primary w-100 py-3">
+        <span class="h5">📷 Fotoğraf Çek veya Yükle</span>
+    </label>
+    
+    <div id="fileNameDisplay" class="text-center mt-2 text-muted fst-italic">
+        Henüz resim seçilmedi.
+    </div>
+</div>
                         <div class="col-12 text-end">
                             <button type="submit" class="btn btn-success" id="submitBtn">Kaydet</button>
                         </div>
