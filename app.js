@@ -9,6 +9,8 @@ let isSubmitting = false;
 // FIREBASE IMPORTLARI
 // =======================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInAnonymously } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { 
     getFirestore, 
     collection, 
@@ -40,6 +42,17 @@ const firebaseConfig = {
 // =======================
 // FIREBASE INIT
 // =======================
+const auth = getAuth(app);
+
+signInAnonymously(auth)
+  .then(() => {
+    console.log("Anonim auth OK");
+  })
+  .catch((error) => {
+    console.error("Anonim auth HATASI:", error);
+  });
+
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
