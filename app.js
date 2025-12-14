@@ -1,31 +1,17 @@
 // =======================
+// FIREBASE IMPORTLARI
+// =======================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"; // onAuthStateChanged ekledik
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+// =======================
 // GLOBAL DEĞİŞKENLER
 // =======================
 let selectedImageFile = null;
 let materialsData = [];
 let isSubmitting = false;
-
-// =======================
-// FIREBASE IMPORTLARI
-// =======================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDocs, 
-    query, 
-    orderBy 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-import { 
-    getStorage, 
-    ref, 
-    uploadBytes, 
-    getDownloadURL 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 // =======================
 // FIREBASE CONFIG
@@ -40,48 +26,49 @@ const firebaseConfig = {
 };
 
 // =======================
-// FIREBASE INIT
+// 1. ÖNCE UYGULAMAYI BAŞLAT (SIRALAMA ÖNEMLİ!)
 // =======================
+const app = initializeApp(firebaseConfig); // <-- BU ARTIK EN ÜSTTE
 const auth = getAuth(app);
-
-signInAnonymously(auth)
-  .then(() => {
-    console.log("Anonim auth OK");
-  })
-  .catch((error) => {
-    console.error("Anonim auth HATASI:", error);
-  });
-
-
-const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+// =======================
+// 2. ANONİM GİRİŞ VE VERİ YÜKLEME
+// =======================
+// Sayfa açılır açılmaz veriyi çekme, ÖNCE giriş yapmasını bekle.
+signInAnonymously(auth)
+  .then(() => {
+    console.log("Anonim giriş başarılı, veriler çekiliyor...");
+    // loadMaterials(); // Buradan çağırabiliriz veya onAuthStateChanged kullanabiliriz (daha güvenli):
+  })
+  .catch((error) => {
+    console.error("Giriş Hatası:", error);
+    document.getElementById("catalogList").innerHTML = '<div class="text-danger">Giriş yapılamadı, veriler yüklenemiyor.</div>';
+  });
+
+// Kullanıcı durumu değiştiğinde (Giriş yapıldığında) veriyi çek
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Kullanıcı doğrulandı, şimdi verileri çekebiliriz
+    loadMaterials();
+  }
+});
 
 // =======================
 // RESİM YÜKLEME (KİLİTLİ)
 // =======================
 async function uploadImage(file) {
-    // Submit dışı upload engeli
-    if (!isSubmitting) {
-        throw new Error("Submit dışı upload engellendi");
-    }
-
-    // File doğrulaması
-    if (!(file instanceof File)) {
-        throw new Error("Geçersiz dosya tipi (File değil)");
-    }
+    if (!isSubmitting) throw new Error("Submit dışı upload engellendi");
+    if (!(file instanceof File)) throw new Error("Geçersiz dosya tipi");
 
     console.log("1. Yükleme başlıyor...");
-
     const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
     const fileName = `${Date.now()}_${safeName}`;
     const storageRef = ref(storage, `images/${fileName}`);
 
     const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-
-    console.log("2. Yükleme başarılı:", downloadURL);
-    return downloadURL;
+    return await getDownloadURL(snapshot.ref);
 }
 
 // =======================
@@ -93,8 +80,14 @@ const submitBtn = document.getElementById("submitBtn");
 if (addForm) {
     addForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        isSubmitting = true;
+        
+        // Giriş yapılı mı kontrol et
+        if (!auth.currentUser) {
+            alert("Sistem bağlantısı yok (Auth eksik). Lütfen sayfayı yenileyin.");
+            return;
+        }
 
+        isSubmitting = true;
         submitBtn.disabled = true;
         submitBtn.innerText = "Kaydediliyor...";
 
@@ -105,8 +98,7 @@ if (addForm) {
             const aircraft = document.getElementById("mAircraft").value;
             const note = document.getElementById("mNote").value || "-";
 
-            let imgUrl =
-                "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg";
+            let imgUrl = "https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg";
 
             if (selectedImageFile instanceof File) {
                 submitBtn.innerText = "Resim Yükleniyor...";
@@ -122,25 +114,23 @@ if (addForm) {
                 aircraft,
                 note,
                 imageUrl: imgUrl,
-                createdAt: new Date()
+                createdAt: new Date(),
+                userId: auth.currentUser.uid // Kimin eklediğini de kaydedelim
             });
 
             alert("Kayıt Başarılı!");
-
             addForm.reset();
             selectedImageFile = null;
-
             const display = document.getElementById("fileNameDisplay");
             if (display) {
                 display.innerText = "Henüz resim seçilmedi.";
                 display.className = "text-muted fst-italic text-center mt-2";
             }
-
             loadMaterials();
 
         } catch (err) {
             console.error("KAYIT HATASI:", err);
-            alert(err.message);
+            alert("Hata: " + err.message);
         } finally {
             isSubmitting = false;
             submitBtn.disabled = false;
@@ -154,46 +144,35 @@ if (addForm) {
 // =======================
 async function loadMaterials() {
     const listContainer = document.getElementById("catalogList");
-    if (listContainer) {
-        listContainer.innerHTML = "<div class='text-center'>Yükleniyor...</div>";
-    }
+    if (listContainer) listContainer.innerHTML = "<div class='text-center'>Yükleniyor...</div>";
 
     try {
-        const q = query(
-            collection(db, "materials"),
-            orderBy("createdAt", "desc")
-        );
-
+        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+        
         materialsData = [];
-
         snap.forEach((doc) => {
             materialsData.push({ id: doc.id, ...doc.data() });
         });
 
         renderMaterials(materialsData);
-
     } catch (err) {
         console.error("VERİ ÇEKME HATASI:", err);
-        if (listContainer) {
-            listContainer.innerHTML =
-                "<div class='text-danger'>Veriler yüklenemedi</div>";
-        }
+        // Hata detayını ekrana yazdıralım ki görelim
+        if (listContainer) listContainer.innerHTML = `<div class='text-danger text-center'>Veriler yüklenemedi.<br><small>${err.code || err.message}</small></div>`;
     }
 }
 
 // =======================
-// RENDER
+// RENDER FONKSİYONU
 // =======================
 function renderMaterials(data) {
     const listContainer = document.getElementById("catalogList");
     if (!listContainer) return;
 
     listContainer.innerHTML = "";
-
     if (data.length === 0) {
-        listContainer.innerHTML =
-            "<div class='col-12 text-center'>Kayıt yok</div>";
+        listContainer.innerHTML = "<div class='col-12 text-center'>Kayıt yok</div>";
         return;
     }
 
@@ -202,7 +181,7 @@ function renderMaterials(data) {
         <div class="col-lg-6 col-12">
             <div class="material-card shadow-sm">
                 <div class="material-img-wrapper">
-                    <img src="${item.imageUrl}" loading="lazy">
+                    <img src="${item.imageUrl}" loading="lazy" alt="${item.name}">
                 </div>
                 <div class="material-content">
                     <div><b>Malzeme:</b> ${item.name}</div>
@@ -217,7 +196,7 @@ function renderMaterials(data) {
 }
 
 // =======================
-// FİLTRE
+// FİLTRELEME
 // =======================
 window.filterData = function () {
     const cat = document.getElementById("filterCategory").value;
@@ -225,18 +204,13 @@ window.filterData = function () {
     const term = document.getElementById("searchInput").value.toLowerCase();
 
     const filtered = materialsData.filter((i) => {
-        const t =
-            (i.name || "").toLowerCase() +
-            (i.partNumber || "").toLowerCase() +
-            (i.note || "").toLowerCase();
-
+        const t = (i.name || "").toLowerCase() + (i.partNumber || "").toLowerCase() + (i.note || "").toLowerCase();
         return (
             (cat === "Hepsi" || i.category === cat) &&
             (air === "Hepsi" || i.aircraft === air) &&
             t.includes(term)
         );
     });
-
     renderMaterials(filtered);
 };
 
@@ -245,10 +219,8 @@ window.filterData = function () {
 // =======================
 function handleFileSelect(e) {
     const file = e.target.files?.[0];
-
     if (file instanceof File) {
         selectedImageFile = file;
-
         const d = document.getElementById("fileNameDisplay");
         if (d) {
             d.innerText = `Seçilen Dosya: ${file.name}`;
@@ -260,4 +232,5 @@ function handleFileSelect(e) {
 document.getElementById("inputCamera")?.addEventListener("change", handleFileSelect);
 document.getElementById("inputGallery")?.addEventListener("change", handleFileSelect);
 
-document.addEventListener("DOMContentLoaded", loadMaterials);
+// DİKKAT: document.addEventListener("DOMContentLoaded", loadMaterials); SATIRINI SİLDİK.
+// Artık veriyi 'onAuthStateChanged' içinde çağırıyoruz.
