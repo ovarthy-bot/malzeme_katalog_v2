@@ -108,14 +108,32 @@
                         </div>
                         <div class="mb-3">
                             <label>Görsel (Otomatik Sıkıştırılır)</label>
-                            <input
+<!-- Kamera -->
+<input
   type="file"
-  id="inpFile"
-  class="form-control"
+  id="fileCamera"
   accept="image/*"
   capture="environment"
-  required
+  hidden
 >
+
+<!-- Galeri -->
+<input
+  type="file"
+  id="fileGallery"
+  accept="image/*"
+  hidden
+>
+
+                            <button type="button" class="btn btn-outline-primary w-100 mb-2"
+  id="btnCamera">
+  📷 Kamera ile Çek
+</button>
+
+<button type="button" class="btn btn-outline-secondary w-100"
+  id="btnGallery">
+  🖼️ Galeriden Seç
+</button>
 
                         </div>
                         <button type="submit" class="btn btn-success w-100">Kaydet</button>
