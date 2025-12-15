@@ -127,7 +127,7 @@ function renderFiltered(list) {
         catalogList.innerHTML += `
         <div class="col">
             <div class="card h-100">
-                // render ve renderFiltered içindeki <img> etiketini şununla değiştir:
+            
 <img src="${m.imageUrl}" 
      class="card-img-top" 
      style="cursor: zoom-in;" 
