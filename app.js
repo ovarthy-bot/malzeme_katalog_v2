@@ -58,7 +58,13 @@ function render() {
         catalogList.innerHTML += `
         <div class="col">
             <div class="card h-100">
-                <img src="${m.imageUrl}" class="card-img-top">
+
+<img src="${m.imageUrl}" 
+     class="card-img-top" 
+     style="cursor: zoom-in;" 
+     onclick="viewImage('${m.imageUrl}')" 
+     title="Büyütmek için tıkla">
+     
                 <div class="card-body">
                     <span class="badge bg-primary">${m.category}</span>
                     <span class="badge bg-dark">${m.aircraft}</span>
@@ -121,7 +127,12 @@ function renderFiltered(list) {
         catalogList.innerHTML += `
         <div class="col">
             <div class="card h-100">
-                <img src="${m.imageUrl}" class="card-img-top">
+                // render ve renderFiltered içindeki <img> etiketini şununla değiştir:
+<img src="${m.imageUrl}" 
+     class="card-img-top" 
+     style="cursor: zoom-in;" 
+     onclick="viewImage('${m.imageUrl}')" 
+     title="Büyütmek için tıkla">
                 <div class="card-body">
                     <span class="badge bg-primary">${m.category}</span>
                     <span class="badge bg-dark">${m.aircraft}</span>
@@ -256,4 +267,12 @@ function showLoading(v) {
     loadingOverlay.style.display = v ? "flex" : "none";
 }
 
+
+
 window.addEventListener("DOMContentLoaded", fetchMaterials);
+
+// Resmi büyük gösteren fonksiyon
+window.viewImage = (url) => {
+    document.getElementById("fullImage").src = url;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+};
