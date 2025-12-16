@@ -19,7 +19,7 @@ const firebaseConfig = {
 
 // GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
 // Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
-const VARSAYILAN_RESIM_URL = "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg";
+const VARSAYILAN_RESIM_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
