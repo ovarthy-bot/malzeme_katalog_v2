@@ -188,14 +188,7 @@ window.deleteMaterial = async (id, img) => {
         console.error("Silme hatası:", error);
         showLoading(false);
     }
-};window.deleteMaterial = async (id, img) => {
-    if (!confirm("Silinsin mi?")) return;
-    showLoading(true);
-    await deleteDoc(doc(db, "materials", id));
-    await deleteObject(ref(storage, img));
-    fetchMaterials();
 };
-
 
 /* SUBMIT */
 addForm.onsubmit = e => {
