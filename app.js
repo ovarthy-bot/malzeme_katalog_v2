@@ -17,6 +17,9 @@ const firebaseConfig = {
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
+// Buraya Adım 1'de kopyaladığınız linki yapıştırın
+const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -184,40 +187,39 @@ addForm.onsubmit = e => {
     const file = inpFile.files[0];
 
     if (file) {
-        // 1. ÖZELLİK: Resim yüklendiğinde sıkıştır ve çözünürlüğü düşür
-        // Sadece maxWidth belirlediğimiz için Compressor en-boy oranını otomatik korur.
+        // Resim seçildiyse sıkıştır ve yükle
         new Compressor(file, {
-            quality: 0.6, // Kaliteyi %60'a düşürür
-            maxWidth: 1024, // Genişliği max 1024px yapar, boyu buna göre ayarlar
+            quality: 0.6,
+            maxWidth: 1024,
             success(result) {
                 upload(result);
             },
             error(err) {
                 console.error("Sıkıştırma hatası:", err.message);
+                // Sıkıştırma hatası olsa bile orjinal dosyayı yüklemeyi deneyebilir 
+                // veya kullanıcıyı uyarabilirsiniz. Şimdilik hata basıyoruz.
             }
         });
-    } else if (editId) {
-        // 2. ÖZELLİK: Güncelleme modunda resim seçilmediyse doğrudan yükleme fonksiyonuna git
-        // Bu durumda 'file' parametresi null gidecek.
-        upload(null);
     } else {
-        alert("Lütfen bir resim seçin!");
+        // Resim seçilmediyse (Düzenleme modu veya Resimsiz yeni kayıt)
+        // null gönderiyoruz, upload fonksiyonu bunu halledecek.
+        upload(null);
     }
 };
 
 async function upload(file) {
     showLoading(true);
 
-    let imageUrl = editImageUrl; // Varsayılan olarak mevcut resmi (varsa) tutuyoruz
+    let imageUrl = editImageUrl; // Düzenleme yapılıyorsa eski resim URL'si buradadır
 
-    // Eğer yeni bir dosya seçilmişse ve sıkıştırılmışsa işle:
+    // Eğer yeni dosya seçilmişse:
     if (file) {
-        // Eski resim varsa onu Storage'dan sil (Yer kaplamasın)
-        if (editImageUrl) {
+        // Eski resim varsa ve varsayılan resim değilse sil
+        if (editImageUrl && editImageUrl !== VARSAYILAN_RESIM_URL) {
             try {
                 await deleteObject(ref(storage, editImageUrl));
             } catch (err) {
-                console.warn("Eski resim silinemedi veya zaten yok.", err);
+                console.warn("Eski resim silinemedi.", err);
             }
         }
         
@@ -226,15 +228,20 @@ async function upload(file) {
         const s = await uploadBytes(r, file);
         imageUrl = await getDownloadURL(s.ref);
     }
+    
+    // Eğer dosya seçilmemişse VE düzenleme modunda değilsek (Yeni Kayıt)
+    else if (!editId) {
+        imageUrl = VARSAYILAN_RESIM_URL;
+    }
 
-    // data objesi içinde imageUrl ya eskisi (editImageUrl) ya da yenisi olarak kalır
+    // Veriyi hazırla
     const data = {
         name: inpName.value,
         pn: inpPN.value,
         category: inpCat.value,
         aircraft: inpAircraft.value,
         note: inpNote.value,
-        imageUrl, // Burada her zaman bir değer olacak
+        imageUrl: imageUrl, 
         createdAt: serverTimestamp()
     };
 
