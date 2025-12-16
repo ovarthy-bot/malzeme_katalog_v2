@@ -1,7 +1,3 @@
-// GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
-// Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
-const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
     getFirestore, collection, addDoc, getDocs,
@@ -22,6 +18,12 @@ const firebaseConfig = {
     messagingSenderId: "471134585410",
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
+
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// BU SATIRI EKLEYİN 👇
+const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
 
 
 
