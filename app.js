@@ -12,14 +12,10 @@ const firebaseConfig = {
     apiKey: "AIzaSyDgFmtEiKYuzQifzggyimdVgWfGHILFX7g",
     authDomain: "pn-katalog-v2-99886.firebaseapp.com",
     projectId: "pn-katalog-v2-99886",
-    storageBucket: "pn-katalog-v2-99886.appspot.com",
+    storageBucket: "pn-katalog-v2-99886.firebasestorage.app",
     messagingSenderId: "471134585410",
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
-
-const NO_IMAGE_URL =
-  "https://firebasestorage.googleapis.com/v0/b/pn-katalog-v2-99886.firebasestorage.app/o/no-image.png?alt=media&token=089aefb9-4734-454d-977e-8e5060b472ee";
-
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -31,13 +27,10 @@ let editId = null;
 let editImageUrl = null;
 
 /* DOM */
-const addModal = document.getElementById("addModal");
 const addForm = document.getElementById("addForm");
 const catalogList = document.getElementById("catalogList");
 const loadingOverlay = document.getElementById("loadingOverlay");
 
-const btnCamera = document.getElementById("btnCamera");
-const btnGallery = document.getElementById("btnGallery");
 const fileCamera = document.getElementById("fileCamera");
 const fileGallery = document.getElementById("fileGallery");
 const inpFile = document.getElementById("inpFile");
@@ -112,8 +105,6 @@ function applyFilters() {
 
         const matchesCat = !cat || m.category === cat;
         const matchesAc = !ac || m.aircraft === ac;
-        const addModal = document.getElementById("addModal");
-
 
         return matchesText && matchesCat && matchesAc;
     });
@@ -162,12 +153,10 @@ function renderFiltered(list) {
 }
 
 
-
 window.editMaterial = id => {
     const m = allMaterials.find(x => x.id === id);
     editId = id;
     editImageUrl = m.imageUrl;
-
 
     inpName.value = m.name;
     inpPN.value = m.pn;
@@ -182,21 +171,11 @@ window.editMaterial = id => {
 
 window.deleteMaterial = async (id, img) => {
     if (!confirm("Silinsin mi?")) return;
-
     showLoading(true);
     await deleteDoc(doc(db, "materials", id));
-
-    /*if (img && img !== NO_IMAGE_URL) {
-        try {
-            await deleteObject(ref(storage, img));
-        } catch (e) {
-            console.warn("Resim silinemedi:", e);
-        }
-    } */
-
+    await deleteObject(ref(storage, img));
     fetchMaterials();
 };
-
 
 
 /* SUBMIT */
@@ -205,9 +184,11 @@ addForm.onsubmit = e => {
     const file = inpFile.files[0];
 
     if (file) {
+        // 1. ÖZELLİK: Resim yüklendiğinde sıkıştır ve çözünürlüğü düşür
+        // Sadece maxWidth belirlediğimiz için Compressor en-boy oranını otomatik korur.
         new Compressor(file, {
-            quality: 0.6,
-            maxWidth: 1024,
+            quality: 0.6, // Kaliteyi %60'a düşürür
+            maxWidth: 1024, // Genişliği max 1024px yapar, boyu buna göre ayarlar
             success(result) {
                 upload(result);
             },
@@ -215,43 +196,45 @@ addForm.onsubmit = e => {
                 console.error("Sıkıştırma hatası:", err.message);
             }
         });
-    } else {
-        // Resim yok → no-image ile devam
+    } else if (editId) {
+        // 2. ÖZELLİK: Güncelleme modunda resim seçilmediyse doğrudan yükleme fonksiyonuna git
+        // Bu durumda 'file' parametresi null gidecek.
         upload(null);
+    } else {
+        alert("Lütfen bir resim seçin!");
     }
 };
-
 
 async function upload(file) {
     showLoading(true);
 
-    // Öncelik sırası:
-    // 1) Düzenlemede eski resim
-    // 2) Yoksa no-image
-    let imageUrl = editImageUrl || NO_IMAGE_URL;
+    let imageUrl = editImageUrl; // Varsayılan olarak mevcut resmi (varsa) tutuyoruz
 
+    // Eğer yeni bir dosya seçilmişse ve sıkıştırılmışsa işle:
     if (file) {
-        // Eski resim varsa ve no-image DEĞİLSE sil
-        if (editImageUrl && editImageUrl !== NO_IMAGE_URL) {
+        // Eski resim varsa onu Storage'dan sil (Yer kaplamasın)
+        if (editImageUrl) {
             try {
                 await deleteObject(ref(storage, editImageUrl));
             } catch (err) {
-                console.warn("Eski resim silinemedi:", err);
+                console.warn("Eski resim silinemedi veya zaten yok.", err);
             }
         }
-
+        
+        // Yeni resmi yükle
         const r = ref(storage, "images/" + Date.now() + "_" + file.name);
         const s = await uploadBytes(r, file);
         imageUrl = await getDownloadURL(s.ref);
     }
 
+    // data objesi içinde imageUrl ya eskisi (editImageUrl) ya da yenisi olarak kalır
     const data = {
         name: inpName.value,
         pn: inpPN.value,
         category: inpCat.value,
         aircraft: inpAircraft.value,
         note: inpNote.value,
-        imageUrl,
+        imageUrl, // Burada her zaman bir değer olacak
         createdAt: serverTimestamp()
     };
 
@@ -263,11 +246,10 @@ async function upload(file) {
         resetForm();
         fetchMaterials();
     } catch (error) {
-        console.error("Kayıt hatası:", error);
+        console.error("Veri kaydedilirken hata oluştu:", error);
         showLoading(false);
     }
 }
-
 
 
 /* HELPERS */
@@ -275,6 +257,7 @@ function resetForm() {
     addForm.reset();
     editId = null;
     editImageUrl = null;
+    inpFile.required = true;
     document.querySelector(".modal-title").innerText = "Malzeme Ekle";
     bootstrap.Modal.getInstance(addModal).hide();
     showLoading(false);
