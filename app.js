@@ -1,3 +1,7 @@
+// GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
+// Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
+const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
     getFirestore, collection, addDoc, getDocs,
@@ -7,9 +11,7 @@ import {
     getStorage, ref, uploadBytes, getDownloadURL, deleteObject
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-// GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
-// Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
-const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+
 
 /* FIREBASE */
 const firebaseConfig = {
