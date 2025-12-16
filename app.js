@@ -12,13 +12,13 @@ const firebaseConfig = {
     apiKey: "AIzaSyDgFmtEiKYuzQifzggyimdVgWfGHILFX7g",
     authDomain: "pn-katalog-v2-99886.firebaseapp.com",
     projectId: "pn-katalog-v2-99886",
-    storageBucket: "pn-katalog-v2-99886.firebasestorage.app",
+    storageBucket: "pn-katalog-v2-99886.appspot.com",
     messagingSenderId: "471134585410",
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
 const NO_IMAGE_URL =
-  "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+  "https://firebasestorage.googleapis.com/v0/b/pn-katalog-v2-99886.firebasestorage.app/o/no-image.png?alt=media&token=089aefb9-4734-454d-977e-8e5060b472ee";
 
 
 const app = initializeApp(firebaseConfig);
@@ -31,10 +31,13 @@ let editId = null;
 let editImageUrl = null;
 
 /* DOM */
+
 const addForm = document.getElementById("addForm");
 const catalogList = document.getElementById("catalogList");
 const loadingOverlay = document.getElementById("loadingOverlay");
 
+const btnCamera = document.getElementById("btnCamera");
+const btnGallery = document.getElementById("btnGallery");
 const fileCamera = document.getElementById("fileCamera");
 const fileGallery = document.getElementById("fileGallery");
 const inpFile = document.getElementById("inpFile");
