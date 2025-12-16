@@ -172,6 +172,25 @@ window.editMaterial = id => {
 window.deleteMaterial = async (id, img) => {
     if (!confirm("Silinsin mi?")) return;
     showLoading(true);
+
+    try {
+        // 1. Önce Firestore kaydını sil
+        await deleteDoc(doc(db, "materials", id));
+
+        // 2. Resmi Storage'dan sil (AMA SADECE VARSAYILAN RESİM DEĞİLSE)
+        // Eğer resim linki 'no-image.png' içermiyorsa sil, içeriyorsa dokunma.
+        if (img && !img.includes("no-image.png")) {
+            await deleteObject(ref(storage, img));
+        }
+
+        fetchMaterials();
+    } catch (error) {
+        console.error("Silme hatası:", error);
+        showLoading(false);
+    }
+};window.deleteMaterial = async (id, img) => {
+    if (!confirm("Silinsin mi?")) return;
+    showLoading(true);
     await deleteDoc(doc(db, "materials", id));
     await deleteObject(ref(storage, img));
     fetchMaterials();
@@ -184,69 +203,80 @@ addForm.onsubmit = e => {
     const file = inpFile.files[0];
 
     if (file) {
-        // 1. ÖZELLİK: Resim yüklendiğinde sıkıştır ve çözünürlüğü düşür
-        // Sadece maxWidth belirlediğimiz için Compressor en-boy oranını otomatik korur.
+        // Resim varsa sıkıştır ve yükle
         new Compressor(file, {
-            quality: 0.6, // Kaliteyi %60'a düşürür
-            maxWidth: 1024, // Genişliği max 1024px yapar, boyu buna göre ayarlar
+            quality: 0.6,
+            maxWidth: 1024,
             success(result) {
                 upload(result);
             },
             error(err) {
                 console.error("Sıkıştırma hatası:", err.message);
+                // Hata olsa bile users'ı bekletmemek için null ile devam edilebilir veya hata gösterilir
+                alert("Resim sıkıştırılamadı.");
             }
         });
-    } else if (editId) {
-        // 2. ÖZELLİK: Güncelleme modunda resim seçilmediyse doğrudan yükleme fonksiyonuna git
-        // Bu durumda 'file' parametresi null gidecek.
-        upload(null);
     } else {
-        alert("Lütfen bir resim seçin!");
+        // Resim seçilmedi (Hem yeni kayıt hem düzenleme için buraya düşer)
+        // upload fonksiyonu içeride durumu yönetecek.
+        upload(null);
     }
 };
 
 async function upload(file) {
     showLoading(true);
 
-    let imageUrl = editImageUrl; // Varsayılan olarak mevcut resmi (varsa) tutuyoruz
-
-    // Eğer yeni bir dosya seçilmişse ve sıkıştırılmışsa işle:
-    if (file) {
-        // Eski resim varsa onu Storage'dan sil (Yer kaplamasın)
-        if (editImageUrl) {
-            try {
-                await deleteObject(ref(storage, editImageUrl));
-            } catch (err) {
-                console.warn("Eski resim silinemedi veya zaten yok.", err);
-            }
-        }
-        
-        // Yeni resmi yükle
-        const r = ref(storage, "images/" + Date.now() + "_" + file.name);
-        const s = await uploadBytes(r, file);
-        imageUrl = await getDownloadURL(s.ref);
-    }
-
-    // data objesi içinde imageUrl ya eskisi (editImageUrl) ya da yenisi olarak kalır
-    const data = {
-        name: inpName.value,
-        pn: inpPN.value,
-        category: inpCat.value,
-        aircraft: inpAircraft.value,
-        note: inpNote.value,
-        imageUrl, // Burada her zaman bir değer olacak
-        createdAt: serverTimestamp()
-    };
+    let imageUrl = editImageUrl; // Düzenleme modundaysak mevcut resmi koru
 
     try {
-        editId
-            ? await updateDoc(doc(db, "materials", editId), data)
-            : await addDoc(collection(db, "materials"), data);
+        // SENARYO 1: Yeni kayıt yapılıyor ve dosya seçilmemiş
+        if (!editId && !file) {
+            // Firebase Storage ana dizinindeki no-image.png'nin linkini al
+            const defaultImageRef = ref(storage, "no-image.png");
+            imageUrl = await getDownloadURL(defaultImageRef);
+        }
+
+        // SENARYO 2: Dosya seçilmiş (Yeni veya Düzenleme)
+        if (file) {
+            // Eski resim varsa ve varsayılan resim değilse sil
+            if (editImageUrl && !editImageUrl.includes("no-image.png")) {
+                try {
+                    await deleteObject(ref(storage, editImageUrl));
+                } catch (err) {
+                    console.warn("Eski resim silinemedi.", err);
+                }
+            }
+            
+            // Yeni resmi yükle
+            const r = ref(storage, "images/" + Date.now() + "_" + file.name);
+            const s = await uploadBytes(r, file);
+            imageUrl = await getDownloadURL(s.ref);
+        }
+
+        // Veriyi hazırla
+        const data = {
+            name: inpName.value,
+            pn: inpPN.value,
+            category: inpCat.value,
+            aircraft: inpAircraft.value,
+            note: inpNote.value,
+            imageUrl: imageUrl, // Artık burada mutlaka bir link var (yeni, eski veya varsayılan)
+            createdAt: serverTimestamp()
+        };
+
+        // Firestore'a yaz
+        if (editId) {
+            await updateDoc(doc(db, "materials", editId), data);
+        } else {
+            await addDoc(collection(db, "materials"), data);
+        }
 
         resetForm();
         fetchMaterials();
+
     } catch (error) {
-        console.error("Veri kaydedilirken hata oluştu:", error);
+        console.error("İşlem hatası:", error);
+        alert("Bir hata oluştu: " + error.code || error.message);
         showLoading(false);
     }
 }
@@ -257,7 +287,7 @@ function resetForm() {
     addForm.reset();
     editId = null;
     editImageUrl = null;
-    inpFile.required = true;
+    inpFile.required = false;
     document.querySelector(".modal-title").innerText = "Malzeme Ekle";
     bootstrap.Modal.getInstance(addModal).hide();
     showLoading(false);
