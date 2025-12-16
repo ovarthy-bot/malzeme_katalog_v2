@@ -31,7 +31,7 @@ let editId = null;
 let editImageUrl = null;
 
 /* DOM */
-
+const addModal = document.getElementById("addModal");
 const addForm = document.getElementById("addForm");
 const catalogList = document.getElementById("catalogList");
 const loadingOverlay = document.getElementById("loadingOverlay");
@@ -112,6 +112,8 @@ function applyFilters() {
 
         const matchesCat = !cat || m.category === cat;
         const matchesAc = !ac || m.aircraft === ac;
+        const addModal = document.getElementById("addModal");
+
 
         return matchesText && matchesCat && matchesAc;
     });
@@ -184,13 +186,13 @@ window.deleteMaterial = async (id, img) => {
     showLoading(true);
     await deleteDoc(doc(db, "materials", id));
 
-    if (img && img !== NO_IMAGE_URL) {
+    /*if (img && img !== NO_IMAGE_URL) {
         try {
             await deleteObject(ref(storage, img));
         } catch (e) {
             console.warn("Resim silinemedi:", e);
         }
-    }
+    } */
 
     fetchMaterials();
 };
