@@ -19,17 +19,12 @@ const firebaseConfig = {
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-// BU SATIRI EKLEYİN 👇
-const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
-
-
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+// BU SATIRI EKLEYİN 👇
+const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
 
 /* GLOBAL */
 let allMaterials = [];
