@@ -153,10 +153,13 @@ function renderFiltered(list) {
 }
 
 
+
 window.editMaterial = id => {
     const m = allMaterials.find(x => x.id === id);
     editId = id;
     editImageUrl = m.imageUrl;
+<input type="file" id="inpFile" hidden required>
+<input type="file" id="inpFile" hidden required>
 
     inpName.value = m.name;
     inpPN.value = m.pn;
