@@ -17,6 +17,10 @@ const firebaseConfig = {
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
+const NO_IMAGE_URL =
+  "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -158,8 +162,7 @@ window.editMaterial = id => {
     const m = allMaterials.find(x => x.id === id);
     editId = id;
     editImageUrl = m.imageUrl;
-<input type="file" id="inpFile" hidden required>
-<input type="file" id="inpFile" hidden required>
+
 
     inpName.value = m.name;
     inpPN.value = m.pn;
@@ -174,11 +177,21 @@ window.editMaterial = id => {
 
 window.deleteMaterial = async (id, img) => {
     if (!confirm("Silinsin mi?")) return;
+
     showLoading(true);
     await deleteDoc(doc(db, "materials", id));
-    await deleteObject(ref(storage, img));
+
+    if (img && img !== NO_IMAGE_URL) {
+        try {
+            await deleteObject(ref(storage, img));
+        } catch (e) {
+            console.warn("Resim silinemedi:", e);
+        }
+    }
+
     fetchMaterials();
 };
+
 
 
 /* SUBMIT */
@@ -187,11 +200,9 @@ addForm.onsubmit = e => {
     const file = inpFile.files[0];
 
     if (file) {
-        // 1. ÖZELLİK: Resim yüklendiğinde sıkıştır ve çözünürlüğü düşür
-        // Sadece maxWidth belirlediğimiz için Compressor en-boy oranını otomatik korur.
         new Compressor(file, {
-            quality: 0.6, // Kaliteyi %60'a düşürür
-            maxWidth: 1024, // Genişliği max 1024px yapar, boyu buna göre ayarlar
+            quality: 0.6,
+            maxWidth: 1024,
             success(result) {
                 upload(result);
             },
@@ -199,45 +210,43 @@ addForm.onsubmit = e => {
                 console.error("Sıkıştırma hatası:", err.message);
             }
         });
-    } else if (editId) {
-        // 2. ÖZELLİK: Güncelleme modunda resim seçilmediyse doğrudan yükleme fonksiyonuna git
-        // Bu durumda 'file' parametresi null gidecek.
-        upload(null);
     } else {
-        alert("Lütfen bir resim seçin!");
+        // Resim yok → no-image ile devam
+        upload(null);
     }
 };
+
 
 async function upload(file) {
     showLoading(true);
 
-    let imageUrl = editImageUrl; // Varsayılan olarak mevcut resmi (varsa) tutuyoruz
+    // Öncelik sırası:
+    // 1) Düzenlemede eski resim
+    // 2) Yoksa no-image
+    let imageUrl = editImageUrl || NO_IMAGE_URL;
 
-    // Eğer yeni bir dosya seçilmişse ve sıkıştırılmışsa işle:
     if (file) {
-        // Eski resim varsa onu Storage'dan sil (Yer kaplamasın)
-        if (editImageUrl) {
+        // Eski resim varsa ve no-image DEĞİLSE sil
+        if (editImageUrl && editImageUrl !== NO_IMAGE_URL) {
             try {
                 await deleteObject(ref(storage, editImageUrl));
             } catch (err) {
-                console.warn("Eski resim silinemedi veya zaten yok.", err);
+                console.warn("Eski resim silinemedi:", err);
             }
         }
-        
-        // Yeni resmi yükle
+
         const r = ref(storage, "images/" + Date.now() + "_" + file.name);
         const s = await uploadBytes(r, file);
         imageUrl = await getDownloadURL(s.ref);
     }
 
-    // data objesi içinde imageUrl ya eskisi (editImageUrl) ya da yenisi olarak kalır
     const data = {
         name: inpName.value,
         pn: inpPN.value,
         category: inpCat.value,
         aircraft: inpAircraft.value,
         note: inpNote.value,
-        imageUrl, // Burada her zaman bir değer olacak
+        imageUrl,
         createdAt: serverTimestamp()
     };
 
@@ -249,10 +258,11 @@ async function upload(file) {
         resetForm();
         fetchMaterials();
     } catch (error) {
-        console.error("Veri kaydedilirken hata oluştu:", error);
+        console.error("Kayıt hatası:", error);
         showLoading(false);
     }
 }
+
 
 
 /* HELPERS */
@@ -260,7 +270,6 @@ function resetForm() {
     addForm.reset();
     editId = null;
     editImageUrl = null;
-    inpFile.required = true;
     document.querySelector(".modal-title").innerText = "Malzeme Ekle";
     bootstrap.Modal.getInstance(addModal).hide();
     showLoading(false);
