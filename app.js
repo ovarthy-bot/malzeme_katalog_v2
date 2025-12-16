@@ -19,7 +19,7 @@ const firebaseConfig = {
 
 // GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
 // Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
-const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.jpg";
+const VARSAYILAN_RESIM_URL = "https://media.istockphoto.com/id/1352945762/vector/no-image-available-like-missing-picture.jpg?s=612x612&w=0&k=20&c=4X-znbt02a8EIdxwDFaxfmKvUhTnLvLMv1i1f3bToog=";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
