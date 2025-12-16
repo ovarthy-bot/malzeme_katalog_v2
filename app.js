@@ -18,7 +18,7 @@ const firebaseConfig = {
 };
 
 // Buraya Adım 1'de kopyaladığınız linki yapıştırın
-const VARSAYILAN_RESIM_URL = "gs://pn-katalog-v2-99886.firebasestorage.app/no image.png";
+const VARSAYILAN_RESIM_URL = "https://firebasestorage.googleapis.com/v0/b/pn-katalog-v2-99886.firebasestorage.app/o/no%20image.png?alt=media&token=228af9c9-1ea4-4d26-98f1-024c07011931";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
