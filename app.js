@@ -17,8 +17,9 @@ const firebaseConfig = {
     appId: "1:471134585410:web:64012ec2209d3432f063db"
 };
 
-// Buraya Adım 1'de kopyaladığınız linki yapıştırın
-const VARSAYILAN_RESIM_URL = "https://firebasestorage.googleapis.com/v0/b/pn-katalog-v2-99886.firebasestorage.app/o/no%20image.png?alt=media&token=228af9c9-1ea4-4d26-98f1-024c07011931";
+// GÜNCELLEME 1: Garanti çalışan bir placeholder görseli (İnternetten)
+// Eğer kendi yüklediğiniz resmin linkini düzeltebilirseniz buraya tekrar onu yapıştırabilirsiniz.
+const VARSAYILAN_RESIM_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -38,6 +39,9 @@ const fileCamera = document.getElementById("fileCamera");
 const fileGallery = document.getElementById("fileGallery");
 const inpFile = document.getElementById("inpFile");
 
+// GÜNCELLEME 2: HTML'de değişiklik yapmadığınız için JS ile zorunluluğu kaldırıyoruz
+inpFile.required = false; 
+
 btnCamera.onclick = () => fileCamera.click();
 btnGallery.onclick = () => fileGallery.click();
 
@@ -55,7 +59,6 @@ async function fetchMaterials() {
 }
 
 function render() {
-    
     catalogList.innerHTML = "";
     allMaterials.forEach(m => {
         catalogList.innerHTML += `
@@ -88,7 +91,6 @@ function render() {
 }
 
 /* SEARCH + FILTER */
-
 document.getElementById("btnFilter").onclick = applyFilters;
 document.getElementById("searchInput").onkeyup = applyFilters;
 document.getElementById("filterCategory").onchange = applyFilters;
@@ -100,7 +102,6 @@ function applyFilters() {
     const ac = filterAircraft.value;
 
     const filtered = allMaterials.filter(m => {
-
         const matchesText =
             m.name.toLowerCase().includes(text) ||
             m.pn.toLowerCase().includes(text) ||
@@ -175,8 +176,20 @@ window.editMaterial = id => {
 window.deleteMaterial = async (id, img) => {
     if (!confirm("Silinsin mi?")) return;
     showLoading(true);
+    
+    // Veritabanından sil
     await deleteDoc(doc(db, "materials", id));
-    await deleteObject(ref(storage, img));
+    
+    // GÜNCELLEME 3: Eğer resim varsayılan resim DEĞİLSE Storage'dan sil.
+    // Varsayılan resmi silersek diğer tüm kayıtlardaki resimler de bozulur.
+    if (img !== VARSAYILAN_RESIM_URL) {
+        try {
+            await deleteObject(ref(storage, img));
+        } catch (error) {
+            console.log("Resim silinirken hata (veya zaten yok):", error);
+        }
+    }
+    
     fetchMaterials();
 };
 
@@ -187,7 +200,6 @@ addForm.onsubmit = e => {
     const file = inpFile.files[0];
 
     if (file) {
-        // Resim seçildiyse sıkıştır ve yükle
         new Compressor(file, {
             quality: 0.6,
             maxWidth: 1024,
@@ -196,13 +208,9 @@ addForm.onsubmit = e => {
             },
             error(err) {
                 console.error("Sıkıştırma hatası:", err.message);
-                // Sıkıştırma hatası olsa bile orjinal dosyayı yüklemeyi deneyebilir 
-                // veya kullanıcıyı uyarabilirsiniz. Şimdilik hata basıyoruz.
             }
         });
     } else {
-        // Resim seçilmediyse (Düzenleme modu veya Resimsiz yeni kayıt)
-        // null gönderiyoruz, upload fonksiyonu bunu halledecek.
         upload(null);
     }
 };
@@ -210,11 +218,11 @@ addForm.onsubmit = e => {
 async function upload(file) {
     showLoading(true);
 
-    let imageUrl = editImageUrl; // Düzenleme yapılıyorsa eski resim URL'si buradadır
+    let imageUrl = editImageUrl; 
 
-    // Eğer yeni dosya seçilmişse:
+    // Yeni dosya seçildiyse
     if (file) {
-        // Eski resim varsa ve varsayılan resim değilse sil
+        // Eski resim varsa ve varsayılan değilse sil
         if (editImageUrl && editImageUrl !== VARSAYILAN_RESIM_URL) {
             try {
                 await deleteObject(ref(storage, editImageUrl));
@@ -223,18 +231,18 @@ async function upload(file) {
             }
         }
         
-        // Yeni resmi yükle
+        // Yeni yükle
         const r = ref(storage, "images/" + Date.now() + "_" + file.name);
         const s = await uploadBytes(r, file);
         imageUrl = await getDownloadURL(s.ref);
     }
     
-    // Eğer dosya seçilmemişse VE düzenleme modunda değilsek (Yeni Kayıt)
+    // Dosya yoksa ve Yeni Kayıt ise -> Varsayılanı ata
     else if (!editId) {
         imageUrl = VARSAYILAN_RESIM_URL;
     }
+    // Dosya yoksa ve Edit ise -> Eski resim (imageUrl) zaten tanımlı, dokunma.
 
-    // Veriyi hazırla
     const data = {
         name: inpName.value,
         pn: inpPN.value,
@@ -264,7 +272,11 @@ function resetForm() {
     addForm.reset();
     editId = null;
     editImageUrl = null;
-    inpFile.required = true;
+    
+    // GÜNCELLEME 4: Burası true idi, false yaptık.
+    // Yoksa her kayıttan sonra form tekrar resim istemeye başlar.
+    inpFile.required = false; 
+    
     document.querySelector(".modal-title").innerText = "Malzeme Ekle";
     bootstrap.Modal.getInstance(addModal).hide();
     showLoading(false);
@@ -274,11 +286,8 @@ function showLoading(v) {
     loadingOverlay.style.display = v ? "flex" : "none";
 }
 
-
-
 window.addEventListener("DOMContentLoaded", fetchMaterials);
 
-// Resmi büyük gösteren fonksiyon
 window.viewImage = (url) => {
     document.getElementById("fullImage").src = url;
     new bootstrap.Modal(document.getElementById('imageModal')).show();
