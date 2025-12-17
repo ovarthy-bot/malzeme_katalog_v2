@@ -73,11 +73,15 @@ function render() {
                     <p class="small">${m.note || ""}</p>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-warning btn-sm w-50"
-                            onclick="editMaterial('${m.id}')">Düzenle</button>
-                        <button class="btn btn-danger btn-sm w-50"
-                            onclick="deleteMaterial('${m.id}','${m.imageUrl}')">Sil</button>
-                    </div>
+    <button class="btn btn-warning btn-sm"
+        onclick="editMaterial('${m.id}')" title="Düzenle">
+        <i class="bi bi-pencil-square"></i>
+    </button>
+    <button class="btn btn-danger btn-sm"
+        onclick="deleteMaterial('${m.id}','${m.imageUrl}')" title="Sil">
+        <i class="bi bi-trash"></i>
+    </button>
+</div>
                 </div>
             </div>
         </div>`;
