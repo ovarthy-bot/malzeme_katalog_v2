@@ -51,8 +51,34 @@ async function fetchMaterials() {
     showLoading(false);
 }
 
+const CATEGORIES = ["KKD Genmat","Komponent","Kimyasal","Placard","Sarf","Tool","Velcro bant","Vida"];
+
+function renderStats() {
+    const statsBar = document.getElementById("statsBar");
+    const total = allMaterials.length;
+
+    const chips = [{ label: "Tümü", count: total, value: "" }]
+        .concat(CATEGORIES.map(cat => ({
+            label: cat,
+            count: allMaterials.filter(m => m.category === cat).length,
+            value: cat
+        })));
+
+    statsBar.innerHTML = chips.map(c => `
+        <span class="stat-chip${filterCategory.value === c.value ? " active" : ""}"
+              onclick="setCategory('${c.value}')">
+            ${c.label} <span class="chip-count">${c.count}</span>
+        </span>`).join("");
+}
+
+window.setCategory = (val) => {
+    filterCategory.value = val;
+    applyFilters();
+    renderStats();
+};
+
 function render() {
-    
+    renderStats();
     catalogList.innerHTML = "";
     allMaterials.forEach(m => {
         catalogList.innerHTML += `
