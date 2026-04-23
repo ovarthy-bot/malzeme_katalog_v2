@@ -26,10 +26,15 @@
 
         #statsBar {
             display: flex;
-            flex-wrap: wrap;
             gap: 6px;
             padding: 8px 0;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+
+        #statsBar::-webkit-scrollbar { display: none; }
 
         .stat-chip {
             display: inline-flex;
@@ -100,28 +105,12 @@
 
 <div class="card p-3 mb-4 shadow-sm">
     <div class="row g-2">
-        <div class="col-md-5">
+        <div class="col-md-7 col-9">
             <input type="text" id="searchInput" class="form-control"
                    placeholder="Ara: İsim, P/N veya Not">
         </div>
 
-        <div class="col-md-3">
-            <select id="filterCategory" class="form-select">
-                <option value="">Tüm Kategoriler</option>
-                <option>KKD Genmat</option>
-                <option>Komponent</option>
-                <option>Kimyasal</option>
-                <option>Placard</option>
-                <option>Sarf</option>
-                <option>Tool</option>
-                <option>Velcro bant</option>
-                <option>Vida</option>
-                
-                
-            </select>
-        </div>
-
-        <div class="col-md-3">
+        <div class="col-md-4 col-3">
             <select id="filterAircraft" class="form-select">
                 <option value="">Tüm Uçaklar</option>
                 <option>Genel</option>
@@ -130,12 +119,6 @@
                 <option>B737</option>
                 <option>B787</option>
             </select>
-        </div>
-
-        <div class="col-md-1">
-            <button id="btnFilter" class="btn btn-secondary w-100">
-                Bul
-            </button>
         </div>
     </div>
 </div>
