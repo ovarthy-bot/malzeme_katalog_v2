@@ -25,6 +25,8 @@ const storage = getStorage(app);
 let allMaterials = [];
 let editId = null;
 let editImageUrl = null;
+let activeCat = "";
+let searchTimer = null;
 
 /* DOM */
 const addForm = document.getElementById("addForm");
@@ -65,14 +67,14 @@ function renderStats() {
         })));
 
     statsBar.innerHTML = chips.map(c => `
-        <span class="stat-chip${filterCategory.value === c.value ? " active" : ""}"
+        <span class="stat-chip${activeCat === c.value ? " active" : ""}"
               onclick="setCategory('${c.value}')">
             ${c.label} <span class="chip-count">${c.count}</span>
         </span>`).join("");
 }
 
 window.setCategory = (val) => {
-    filterCategory.value = val;
+    activeCat = val;
     applyFilters();
     renderStats();
 };
@@ -116,14 +118,15 @@ function render() {
 
 /* SEARCH + FILTER */
 
-document.getElementById("btnFilter").onclick = applyFilters;
-document.getElementById("searchInput").onkeyup = applyFilters;
-document.getElementById("filterCategory").onchange = applyFilters;
+document.getElementById("searchInput").oninput = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 300);
+};
 document.getElementById("filterAircraft").onchange = applyFilters;
 
 function applyFilters() {
     const text = searchInput.value.toLowerCase();
-    const cat = filterCategory.value;
+    const cat = activeCat;
     const ac = filterAircraft.value;
 
     const filtered = allMaterials.filter(m => {
